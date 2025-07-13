@@ -1,0 +1,80 @@
+import { Task, Tag, User, Priority, TaskStatus } from '../generated/prisma'
+
+// 基础类型扩展
+export interface TaskWithDetails extends Task {
+  subTasks?: Task[]
+  tags?: Tag[]
+  parentTask?: Task | null
+  user?: User
+}
+
+export interface TagWithDetails extends Tag {
+  tasks?: TaskWithDetails[]
+  user?: User
+}
+
+// 表单类型
+export interface CreateTaskInput {
+  title: string
+  description?: string
+  dueDate?: Date
+  dueTime?: Date
+  priority?: Priority
+  parentTaskId?: string
+  tagIds?: string[]
+}
+
+export interface UpdateTaskInput extends Partial<CreateTaskInput> {
+  id: string
+  isCompleted?: boolean
+  status?: TaskStatus
+  sortOrder?: number
+}
+
+export interface CreateTagInput {
+  name: string
+  color?: string
+}
+
+export interface UpdateTagInput extends Partial<CreateTagInput> {
+  id: string
+}
+
+// 视图类型
+export interface TaskFilter {
+  tagIds?: string[]
+  priority?: Priority
+  status?: TaskStatus
+  dueDate?: Date
+  isCompleted?: boolean
+  search?: string
+}
+
+export interface TaskSort {
+  field: 'title' | 'dueDate' | 'priority' | 'createdAt' | 'updatedAt'
+  direction: 'asc' | 'desc'
+}
+
+// 自然语言解析结果
+export interface ParsedTaskInput {
+  title: string
+  dueDate?: Date
+  dueTime?: Date
+  priority?: Priority
+  tagNames?: string[]
+  description?: string
+}
+
+// 统计数据
+export interface TaskStats {
+  total: number
+  completed: number
+  pending: number
+  overdue: number
+  today: number
+  thisWeek: number
+  thisMonth: number
+}
+
+// 导出 Prisma 类型
+export type { Task, Tag, User, Priority, TaskStatus } 
