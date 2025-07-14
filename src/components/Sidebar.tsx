@@ -14,6 +14,7 @@ interface SidebarProps {
 
 interface SidebarHandle {
   refreshTags: () => void
+  refreshTaskStats: () => void
 }
 
 const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
@@ -42,7 +43,8 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
-    refreshTags: fetchTags
+    refreshTags: fetchTags,
+    refreshTaskStats: fetchTaskStats
   }))
 
   useEffect(() => {

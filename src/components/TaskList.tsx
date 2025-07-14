@@ -32,6 +32,7 @@ interface TaskListProps {
   selectedView: 'today' | 'upcoming' | 'all' | 'important' | 'completed' | 'recent' | 'overdue' | 'nodate' | 'thisweek' | 'tag'
   selectedTag?: string | null
   searchFilters?: any
+  onSidebarRefresh?: () => void
 }
 
 interface TaskListHandle {
@@ -394,7 +395,7 @@ const SortableTask = ({
   )
 }
 
-const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, selectedTag }, ref) => {
+const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, selectedTag, onSidebarRefresh }, ref) => {
   const [tasks, setTasks] = useState<TaskWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -464,6 +465,11 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       setTasks(tasks.map(t => 
         t.id === taskId ? updatedTask : t
       ))
+      
+      // 刷新侧边栏统计
+      if (onSidebarRefresh) {
+        onSidebarRefresh()
+      }
     } catch (err) {
       console.error('更新任务状态失败:', err)
     }
@@ -480,6 +486,11 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
     try {
       await api.deleteTask(taskId)
       setTasks(tasks.filter(t => t.id !== taskId))
+      
+      // 刷新侧边栏统计
+      if (onSidebarRefresh) {
+        onSidebarRefresh()
+      }
     } catch (err) {
       console.error('删除任务失败:', err)
     }
@@ -557,9 +568,13 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
 
       setSelectedTaskIds([])
       setBulkEditMode(false)
+      
+      // 刷新侧边栏统计
+      if (onSidebarRefresh) {
+        onSidebarRefresh()
+      }
     } catch (err) {
       console.error('批量更新任务状态失败:', err)
-    } finally {
       setBulkOperationLoading(false)
     }
   }
@@ -579,6 +594,11 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       setTasks(tasks.filter(t => !selectedTaskIds.includes(t.id)))
       setSelectedTaskIds([])
       setBulkEditMode(false)
+      
+      // 刷新侧边栏统计
+      if (onSidebarRefresh) {
+        onSidebarRefresh()
+      }
     } catch (err) {
       console.error('批量删除任务失败:', err)
     } finally {

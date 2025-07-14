@@ -15,7 +15,7 @@ export default function Dashboard() {
   const [searchFilters, setSearchFilters] = useState<any>(null)
   const taskListRef = useRef<{ refreshTasks: () => void } | null>(null)
   const quickAddRef = useRef<{ focus: () => void; blur: () => void; isOpen: boolean } | null>(null)
-  const sidebarRef = useRef<{ refreshTags: () => void } | null>(null)
+  const sidebarRef = useRef<{ refreshTags: () => void; refreshTaskStats: () => void } | null>(null)
 
   const handleTaskCreated = () => {
     // 刷新任务列表
@@ -31,6 +31,13 @@ export default function Dashboard() {
   const handleRefreshTasks = () => {
     if (taskListRef.current) {
       taskListRef.current.refreshTasks()
+    }
+  }
+
+  const handleRefreshSidebar = () => {
+    if (sidebarRef.current) {
+      sidebarRef.current.refreshTaskStats()
+      sidebarRef.current.refreshTags()
     }
   }
 
@@ -140,6 +147,7 @@ export default function Dashboard() {
             selectedView={selectedView}
             selectedTag={selectedTag}
             searchFilters={searchFilters}
+            onSidebarRefresh={handleRefreshSidebar}
           />
         </main>
       </div>
