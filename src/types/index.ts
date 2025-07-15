@@ -77,4 +77,5 @@ export interface TaskStats {
 }
 
 // 导出 Prisma 类型
-export type { Task, Tag, User, Priority, TaskStatus } 
+export { Priority, TaskStatus } 
+export type { Task, Tag, User }  

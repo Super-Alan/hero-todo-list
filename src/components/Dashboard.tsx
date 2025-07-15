@@ -1,11 +1,14 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
+import { api } from '@/lib/api';
+import { CreateTaskInput } from '@/types';
 import { useState, useRef } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import TaskList from './TaskList'
-import QuickAdd from './QuickAdd'
+import SmartQuickAdd from './QuickAdd/SmartQuickAdd'
+import TaskAddBar from './TaskAddBar'
 import { useKeyboardShortcuts, createShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 export default function Dashboard() {
@@ -15,6 +18,8 @@ export default function Dashboard() {
   const [searchFilters, setSearchFilters] = useState<any>(null)
   const taskListRef = useRef<{ refreshTasks: () => void } | null>(null)
   const quickAddRef = useRef<{ focus: () => void; blur: () => void; isOpen: boolean } | null>(null)
+  const [showSmartQuickAdd, setShowSmartQuickAdd] = useState(false)
+  const [quickAddInitialValue, setQuickAddInitialValue] = useState('')
   const sidebarRef = useRef<{ refreshTags: () => void; refreshTaskStats: () => void } | null>(null)
 
   const handleTaskCreated = () => {
@@ -41,17 +46,25 @@ export default function Dashboard() {
     }
   }
 
-  const handleQuickAddFocus = () => {
-    if (quickAddRef.current) {
-      quickAddRef.current.focus()
+    const handleOpenAdvancedAdd = (initialValue: string) => {
+    setQuickAddInitialValue(initialValue);
+    setShowSmartQuickAdd(true);
+  };
+
+    const handleSimpleTaskSubmit = async (task: CreateTaskInput) => {
+    try {
+            await api.createTask(task);
+      handleTaskCreated(); // 刷新列表和侧边栏
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      // 这里可以添加一个用户提示，例如使用 react-hot-toast
     }
-  }
+  };
 
   const handleQuickAddBlur = () => {
-    if (quickAddRef.current && quickAddRef.current.isOpen) {
-      quickAddRef.current.blur()
-    }
-  }
+    setShowSmartQuickAdd(false);
+    setQuickAddInitialValue(''); // 关闭时重置初始值
+  };
 
   const handleViewChange = (view: 'today' | 'upcoming' | 'all' | 'important' | 'completed' | 'recent' | 'overdue' | 'nodate' | 'thisweek' | 'tag') => {
     setSelectedView(view)
@@ -81,7 +94,7 @@ export default function Dashboard() {
       key: 'n',
       ctrlKey: true,
       metaKey: true,
-      action: handleQuickAddFocus
+      action: () => handleOpenAdvancedAdd('') // 快捷键默认不带初始值
     },
     // Escape：关闭快速添加
     {
@@ -135,10 +148,20 @@ export default function Dashboard() {
 
         {/* 主要内容 */}
         <main className="flex-1 overflow-auto p-6">
-          {/* 快速添加栏 */}
-          <QuickAdd 
-            ref={quickAddRef}
-            onTaskCreated={handleTaskCreated}
+  
+          
+          {/* 智能快速添加 */}
+          <SmartQuickAdd
+            isOpen={showSmartQuickAdd}
+            initialInput={quickAddInitialValue}
+            onTasksAdded={handleTaskCreated}
+            onClose={handleQuickAddBlur}
+          />
+
+          {/* 新的任务添加栏 */}
+          <TaskAddBar 
+            onTaskSubmit={handleSimpleTaskSubmit}
+            onOpenAdvanced={handleOpenAdvancedAdd} 
           />
 
           {/* 任务列表 */}
