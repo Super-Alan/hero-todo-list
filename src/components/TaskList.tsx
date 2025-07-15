@@ -170,9 +170,9 @@ const SortableTask = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow ${
+      className={`card-modern rounded-2xl p-4 transition-all duration-300 ${
         task.isCompleted ? 'opacity-60' : ''
-      } ${isDragOverlay ? 'rotate-3 shadow-lg' : ''} ${isSelected ? 'bg-blue-50 border-blue-200' : ''}`}
+      } ${isDragOverlay ? 'rotate-3 shadow-tech scale-105' : ''} ${isSelected ? 'bg-primary-50 border-primary-200 shadow-tech' : ''}`}
     >
       <div className="flex items-start space-x-3">
         {/* 批量编辑模式下的选择复选框 */}
@@ -745,24 +745,37 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">加载中...</span>
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="relative mb-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-tech animate-pulse-glow">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          </div>
+          <div className="absolute -top-2 -right-2 w-4 h-4 bg-neon-blue rounded-full animate-pulse"></div>
+        </div>
+        <span className="text-gray-600 font-medium">加载中...</span>
+        <div className="flex items-center space-x-2 mt-4">
+          <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-neon-purple rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+          <div className="w-2 h-2 bg-neon-green rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-500 mb-4">
-          <Circle className="h-16 w-16 mx-auto" />
+      <div className="text-center py-16">
+        <div className="relative mb-6">
+          <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mx-auto">
+            <Circle className="h-10 w-10 text-red-600" />
+          </div>
+          <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full animate-pulse"></div>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">加载失败</h3>
-        <p className="text-gray-600 mb-4">{error}</p>
+        <h3 className="text-2xl font-bold text-gray-900 mb-3">加载失败</h3>
+        <p className="text-gray-600 mb-6 max-w-md mx-auto">{error}</p>
         <button
           onClick={fetchTasks}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="btn-modern px-6 py-3 font-medium"
         >
           重试
         </button>
@@ -776,73 +789,79 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
   return (
     <div className="space-y-4">
       {/* 标题和批量操作 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
-        <h2 className="text-2xl font-bold text-gray-900">{getViewTitle()}</h2>
+          <h2 className="text-3xl font-bold gradient-text">{getViewTitle()}</h2>
           <button
             onClick={handleToggleBulkEditMode}
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
               bulkEditMode 
-                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-primary-100 text-primary-700 hover:bg-primary-200 shadow-modern'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-modern'
             }`}
           >
             {bulkEditMode ? '取消批量编辑' : '批量编辑'}
           </button>
         </div>
-        <span className="text-sm text-gray-500">
-          {tasks.length} 个任务
-        </span>
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+          <span className="text-sm text-gray-600 font-medium">
+            {tasks.length} 个任务
+          </span>
+        </div>
       </div>
 
       {/* 批量操作栏 */}
       {bulkEditMode && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-200 rounded-2xl p-6 shadow-modern">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <button
                 onClick={handleSelectAll}
-                className="flex items-center space-x-2 text-sm text-blue-700 hover:text-blue-900"
+                className="flex items-center space-x-2 text-sm text-primary-700 hover:text-primary-900 transition-colors"
               >
                 {selectedTaskIds.length === tasks.length ? (
                   <CheckSquare className="h-4 w-4" />
                 ) : (
                   <Square className="h-4 w-4" />
                 )}
-                <span>
+                <span className="font-medium">
                   {selectedTaskIds.length === tasks.length ? '取消全选' : '全选'}
                 </span>
               </button>
-              <span className="text-sm text-blue-600">
-                已选择 {selectedTaskIds.length} 个任务
-              </span>
-                </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-primary-600 font-medium">
+                  已选择 {selectedTaskIds.length} 个任务
+                </span>
+              </div>
+            </div>
                 
             {selectedTaskIds.length > 0 && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <button
                   onClick={handleBulkToggleComplete}
                   disabled={bulkOperationLoading}
-                  className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 disabled:opacity-50 shadow-modern hover:shadow-tech"
                 >
                   {bulkOperationLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Check className="h-4 w-4" />
                   )}
-                  <span>批量完成</span>
+                  <span className="font-medium">批量完成</span>
                 </button>
                 <button
                   onClick={handleBulkDelete}
                   disabled={bulkOperationLoading}
-                  className="flex items-center space-x-1 px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 disabled:opacity-50 shadow-modern hover:shadow-tech"
                 >
                   {bulkOperationLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Trash2 className="h-4 w-4" />
                   )}
-                  <span>批量删除</span>
+                  <span className="font-medium">批量删除</span>
                 </button>
               </div>
             )}
@@ -903,12 +922,30 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
 
       {/* 空状态 */}
       {tasks.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
-            <Circle className="h-16 w-16 mx-auto" />
+        <div className="text-center py-16">
+          <div className="relative mb-6">
+            <div className="w-24 h-24 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center mx-auto animate-float">
+              <Circle className="h-12 w-12 text-primary-600" />
+            </div>
+            <div className="absolute -top-2 -right-2 w-6 h-6 bg-neon-blue rounded-full animate-pulse-glow"></div>
+            <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-neon-purple rounded-full animate-pulse-glow" style={{animationDelay: '0.5s'}}></div>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">没有任务</h3>
-          <p className="text-gray-600">创建您的第一个任务开始使用吧！</p>
+          <h3 className="text-2xl font-bold gradient-text mb-3">没有任务</h3>
+          <p className="text-gray-600 text-lg mb-6">创建您的第一个任务开始使用吧！</p>
+          <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+              <span>智能解析</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-neon-purple rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+              <span>AI 助手</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-neon-green rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
+              <span>实时同步</span>
+            </div>
+          </div>
         </div>
       )}
 

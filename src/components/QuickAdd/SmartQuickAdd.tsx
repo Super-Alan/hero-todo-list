@@ -289,18 +289,20 @@ const SmartQuickAdd: React.FC<SmartQuickAddProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-auto overflow-hidden">
-      <div className="p-4">
-        <ModeSelector 
-          currentMode={state.mode}
-          onModeChange={handleModeChange}
-          detectionResult={detectionResult}
-          showRecommendation={state.mode === 'auto'}
-        />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9998] p-4">
+      <div className="card-modern rounded-2xl shadow-tech w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-scale-in">
+        <div className="p-6">
+          <ModeSelector 
+            currentMode={state.mode}
+            onModeChange={handleModeChange}
+            detectionResult={detectionResult}
+            showRecommendation={state.mode === 'auto'}
+          />
 
-        {/* 主要内容区域 */}
-        <div className="flex-1 overflow-y-auto">
-          {renderModeContent()}
+          {/* 主要内容区域 */}
+          <div className="flex-1 overflow-y-auto mt-4">
+            {renderModeContent()}
+          </div>
         </div>
       </div>
     </div>

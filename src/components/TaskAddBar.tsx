@@ -107,33 +107,35 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onTasksSubmit, on
 
   if (!isActive) {
     return (
-      <div className="mb-4">
+      <div className="mb-6">
         <button
           onClick={() => setIsActive(true)}
-          className="w-full flex items-center bg-white p-3 rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors text-left"
+          className="w-full flex items-center card-modern p-4 rounded-2xl text-left group hover:shadow-tech transition-all duration-300"
         >
-          <svg
-            className="w-5 h-5 text-blue-500 mr-3 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 6v12m6-6H6"
-            />
-          </svg>
-          <span className="text-gray-500">添加任务，例如：明天下午3点开会 #工作 !重要</span>
+          <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-modern group-hover:shadow-tech transition-all duration-300 mr-4">
+            <svg
+              className="w-5 h-5 text-white group-hover:scale-110 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6v12m6-6H6"
+              />
+            </svg>
+          </div>
+          <span className="text-gray-600 group-hover:text-gray-800 transition-colors">添加任务，例如：明天下午3点开会 #工作 !重要</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div ref={wrapperRef} className="mb-4 bg-white p-3 rounded-lg shadow-md border border-blue-500">
+    <div ref={wrapperRef} className="mb-6 card-modern p-4 rounded-2xl border-2 border-primary-500/30 shadow-tech">
       <input
         ref={inputRef}
         type="text"
@@ -141,35 +143,35 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onTasksSubmit, on
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="输入任务后按 Enter 保存"
-        className="w-full focus:outline-none text-base bg-transparent"
+        className="w-full focus:outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
         disabled={isProcessing}
       />
       {parsedTask && (
-        <div className="flex items-center flex-wrap gap-2 mt-2 text-xs text-gray-500">
+        <div className="flex items-center flex-wrap gap-2 mt-3 text-xs">
           {parsedTask.dueDate && (
-            <span className="flex items-center bg-gray-100 px-2 py-0.5 rounded-full">
+            <span className="flex items-center bg-primary-50 text-primary-700 px-3 py-1 rounded-full border border-primary-200">
               <CalendarIcon className="w-3 h-3 mr-1" />
               {new Date(parsedTask.dueDate).toLocaleDateString()}
             </span>
           )}
           {parsedTask.priority && (
-            <span className="flex items-center bg-gray-100 px-2 py-0.5 rounded-full text-red-600">
+            <span className="flex items-center bg-red-50 text-red-600 px-3 py-1 rounded-full border border-red-200">
               <FlagIcon className="w-3 h-3 mr-1" />
               {parsedTask.priority}
             </span>
           )}
           {parsedTask.tagIds?.map(tag => (
-            <span key={tag} className="flex items-center bg-gray-100 px-2 py-0.5 rounded-full">
+            <span key={tag} className="flex items-center bg-gray-50 text-gray-700 px-3 py-1 rounded-full border border-gray-200">
               <TagIcon className="w-3 h-3 mr-1" />
               {tag}
             </span>
           ))}
         </div>
       )}
-      <div className="flex justify-end items-center mt-2 pt-2 border-t border-gray-100">
+      <div className="flex justify-end items-center mt-3 pt-3 border-t border-gray-100">
         <button
           onClick={handleAIAssistant}
-          className="text-xs text-blue-600 hover:text-blue-800 mr-4 font-medium flex items-center space-x-1"
+          className="text-xs text-primary-600 hover:text-primary-700 mr-4 font-medium flex items-center space-x-1 transition-colors"
           disabled={isProcessing}
         >
           <span>🤖</span>
@@ -178,7 +180,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onTasksSubmit, on
         <button
           onClick={handleSubmit}
           disabled={!parsedTask || !parsedTask.title || isProcessing}
-          className="px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium disabled:bg-blue-300 hover:bg-blue-700 transition-colors flex items-center"
+          className="btn-modern px-6 py-2 text-sm font-medium flex items-center"
         >
           {isProcessing ? (
             <>

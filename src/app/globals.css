@@ -2,9 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0ea5e9;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #ffffff;
+  --ring: #0ea5e9;
+  --radius: 0.75rem;
 }
 
 @theme inline {
@@ -16,15 +37,149 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --card: #1e293b;
+    --card-foreground: #f8fafc;
+    --popover: #1e293b;
+    --popover-foreground: #f8fafc;
+    --primary: #0ea5e9;
+    --primary-foreground: #ffffff;
+    --secondary: #334155;
+    --secondary-foreground: #f8fafc;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --accent: #334155;
+    --accent-foreground: #f8fafc;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #334155;
+    --input: #1e293b;
+    --ring: #0ea5e9;
   }
+}
+
+* {
+  border-color: hsl(var(--border));
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-variation-settings: normal;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 现代滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* 现代选择样式 */
+::selection {
+  background: rgba(14, 165, 233, 0.2);
+  color: inherit;
+}
+
+/* 玻璃态效果 */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 霓虹效果 */
+.neon-glow {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+.neon-glow:hover {
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+}
+
+/* 渐变文字 */
+.gradient-text {
+  background: linear-gradient(135deg, #0ea5e9 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 现代按钮样式 */
+.btn-modern {
+  @apply relative overflow-hidden transition-all duration-300 ease-out;
+  @apply bg-gradient-to-r from-primary-500 to-primary-600;
+  @apply hover:from-primary-600 hover:to-primary-700;
+  @apply shadow-modern hover:shadow-tech;
+  @apply transform hover:scale-105 active:scale-95;
+}
+
+.btn-modern::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-white/20 to-transparent;
+  @apply transform -skew-x-12 -translate-x-full;
+  @apply transition-transform duration-700 ease-out;
+}
+
+.btn-modern:hover::before {
+  @apply translate-x-full;
+}
+
+/* 现代卡片样式 */
+.card-modern {
+  @apply bg-white/80 backdrop-blur-sm;
+  @apply border border-white/20;
+  @apply shadow-modern hover:shadow-tech;
+  @apply transition-all duration-300 ease-out;
+  @apply hover:transform hover:scale-[1.02];
+}
+
+/* 输入框现代样式 */
+.input-modern {
+  @apply bg-white/50 backdrop-blur-sm;
+  @apply border border-white/30;
+  @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
+  @apply transition-all duration-200 ease-out;
+  @apply placeholder:text-gray-400;
+}
+
+/* 动画类 */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
 }
 
 /* Custom styles for markdown in chat messages */
@@ -73,7 +228,7 @@ body {
   padding: 0.125em 0.25em;
   border-radius: 0.25em;
   font-size: 0.875em;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 .prose pre {

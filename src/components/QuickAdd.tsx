@@ -210,13 +210,15 @@ const QuickAdd = forwardRef<QuickAddHandle, QuickAddProps>(({ onTaskCreated }, r
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center space-x-2 w-full p-3 text-left text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors"
+          className="flex items-center space-x-3 w-full p-4 text-left text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-2xl border border-white/30 transition-all duration-200 group"
         >
-          <Plus className="h-4 w-4" />
-          <span>添加任务...</span>
+          <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-modern group-hover:shadow-tech transition-all duration-300">
+            <Plus className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
+          </div>
+          <span className="font-medium">添加任务...</span>
         </button>
       ) : (
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-4">
+        <form onSubmit={handleSubmit} className="card-modern rounded-2xl p-6">
           <input
             ref={inputRef}
             type="text"
@@ -224,39 +226,39 @@ const QuickAdd = forwardRef<QuickAddHandle, QuickAddProps>(({ onTaskCreated }, r
             onChange={(e) => setTaskTitle(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="输入任务标题..."
-            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="input-modern w-full p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             disabled={loading}
           />
           
           {/* 解析结果预览 */}
           {parsedResult && (
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-              <div className="text-sm text-gray-700 mb-2">
-                <strong>解析结果：</strong>
-                <span className="ml-2 text-blue-600">{parsedResult.title}</span>
+            <div className="mt-4 p-4 bg-gradient-to-r from-primary-50 to-purple-50 rounded-xl border border-primary-200/50">
+              <div className="text-sm text-gray-700 mb-3">
+                <strong className="text-primary-700">解析结果：</strong>
+                <span className="ml-2 text-primary-600 font-medium">{parsedResult.title}</span>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
                 {parsedResult.dueDate && (
-                  <span className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                  <span className="flex items-center space-x-1 px-3 py-1.5 bg-primary-100 text-primary-700 rounded-full border border-primary-200">
                     <Calendar className="h-3 w-3" />
                     <span>{formatDate(parsedResult.dueDate)}</span>
                   </span>
                 )}
                 {parsedResult.dueTime && (
-                  <span className="flex items-center space-x-1 px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                  <span className="flex items-center space-x-1 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full border border-purple-200">
                     <Calendar className="h-3 w-3" />
                     <span>{formatTime(parsedResult.dueTime)}</span>
                   </span>
                 )}
                 {parsedResult.priority && (
-                  <span className={`flex items-center space-x-1 px-2 py-1 rounded border ${getPriorityColor(parsedResult.priority)}`}>
+                  <span className={`flex items-center space-x-1 px-3 py-1.5 rounded-full border ${getPriorityColor(parsedResult.priority)}`}>
                     <Flag className="h-3 w-3" />
                     <span>{getPriorityLabel(parsedResult.priority)}</span>
                   </span>
                 )}
 
                 {parsedResult.tagNames && parsedResult.tagNames.map((tag, index) => (
-                  <span key={index} className="flex items-center space-x-1 px-2 py-1 bg-pink-100 text-pink-700 rounded">
+                  <span key={index} className="flex items-center space-x-1 px-3 py-1.5 bg-pink-100 text-pink-700 rounded-full border border-pink-200">
                     <Tag className="h-3 w-3" />
                     <span>{tag}</span>
                   </span>
@@ -279,13 +281,13 @@ const QuickAdd = forwardRef<QuickAddHandle, QuickAddProps>(({ onTaskCreated }, r
             </div>
           )}
           
-          <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center justify-between mt-4">
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500">
                 提示：输入"明天下午3点 开会 @标签 重要"或"下午10点参加会议 #工作"来快速设置属性。不存在的标签会自动创建。
               </span>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <button
                 type="button"
                 onClick={() => {
@@ -295,17 +297,17 @@ const QuickAdd = forwardRef<QuickAddHandle, QuickAddProps>(({ onTaskCreated }, r
                   setSuccessMessage(null)
                   setParsedResult(null)
                 }}
-                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-xl transition-all duration-200"
                 disabled={loading}
               >
                 取消
               </button>
               <button
                 type="submit"
-                className="px-4 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                className="btn-modern px-6 py-2 text-sm font-medium flex items-center space-x-2"
                 disabled={loading || !taskTitle.trim()}
               >
-                {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 <span>{loading ? '添加中...' : '添加'}</span>
               </button>
             </div>

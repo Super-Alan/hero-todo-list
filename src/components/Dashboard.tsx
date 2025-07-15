@@ -11,6 +11,7 @@ import TaskList from './TaskList'
 import SmartQuickAdd from './QuickAdd/SmartQuickAdd'
 import TaskAddBar from './TaskAddBar'
 import AIChatPanel from './AIChatPanel';
+import ModelSettings from './ModelSettings'
 import { useKeyboardShortcuts, createShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 export default function Dashboard() {
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [quickAddInitialValue, setQuickAddInitialValue] = useState('')
   const sidebarRef = useRef<{ refreshTags: () => void; refreshTaskStats: () => void } | null>(null)
   const [isAIChatPanelOpen, setIsAIChatPanelOpen] = useState(false);
+  const [showModelSettings, setShowModelSettings] = useState(false);
 
   const handleTaskCreated = async () => {
     // 刷新标签缓存（因为可能创建了新标签）
@@ -152,7 +154,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
       {/* 侧边栏 */}
       <Sidebar
         ref={sidebarRef}
@@ -165,10 +167,10 @@ export default function Dashboard() {
       {/* 主内容区域 */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isAIChatPanelOpen ? 'mr-96' : ''}`}>
         {/* 头部 */}
-        <Header />
+        <Header onOpenModelSettings={() => setShowModelSettings(true)} />
 
         {/* 主要内容 */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 animate-fade-in">
   
           {/* 智能快速添加 */}
           <SmartQuickAdd
@@ -204,25 +206,34 @@ export default function Dashboard() {
         onTasksGenerated={handleBatchTasksSubmit}
       />
 
+      {/* 模型设置弹窗 */}
+      <ModelSettings 
+        isOpen={showModelSettings}
+        onClose={() => setShowModelSettings(false)}
+      />
+
       {/* 快捷键提示 */}
-      <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 border border-gray-200 opacity-90">
-        <div className="text-xs text-gray-600 space-y-1">
-          <div className="font-medium text-gray-800 mb-2">快捷键</div>
-          <div className="flex justify-between">
-            <span>快速添加</span>
-            <span className="text-gray-500">⌘N / Ctrl+N</span>
+      <div className="fixed bottom-6 right-6 glass rounded-2xl p-4 shadow-tech backdrop-blur-md border border-white/20">
+        <div className="text-sm text-gray-700 space-y-2">
+          <div className="flex items-center space-x-2 mb-3">
+            <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+            <div className="font-semibold text-gray-800 gradient-text">快捷键</div>
           </div>
-          <div className="flex justify-between">
-            <span>刷新列表</span>
-            <span className="text-gray-500">⌘R / Ctrl+R</span>
+          <div className="flex justify-between items-center py-1">
+            <span className="text-gray-600">快速添加</span>
+            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-mono">⌘N</span>
           </div>
-          <div className="flex justify-between">
-            <span>切换视图</span>
-            <span className="text-gray-500">1/2/3</span>
+          <div className="flex justify-between items-center py-1">
+            <span className="text-gray-600">刷新列表</span>
+            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-mono">⌘R</span>
           </div>
-          <div className="flex justify-between">
-            <span>关闭</span>
-            <span className="text-gray-500">ESC</span>
+          <div className="flex justify-between items-center py-1">
+            <span className="text-gray-600">切换视图</span>
+            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-mono">1/2/3</span>
+          </div>
+          <div className="flex justify-between items-center py-1">
+            <span className="text-gray-600">关闭</span>
+            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-mono">ESC</span>
           </div>
         </div>
       </div>
