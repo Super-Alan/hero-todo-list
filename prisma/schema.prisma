@@ -167,6 +167,20 @@ model Comment {
   @@map("comments")
 }
 
+// AI 模型提供商
+model ModelProvider {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  endpoint    String
+  apiKey      String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("model_providers")
+}
+
 // 枚举类型
 enum Priority {
   LOW

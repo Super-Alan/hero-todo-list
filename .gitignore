@@ -121,3 +121,6 @@ temp/
 .out
 .storybook-out
 storybook-static
+
+
+*.map

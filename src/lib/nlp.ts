@@ -11,13 +11,32 @@ export interface NLPResult {
 }
 
 export class NaturalLanguageParser {
-  // 时间关键词映射
+  // 时间关键词映射 - 扩展支持更多今日相关表达
   private timeKeywords = {
+    // 今日相关（统一处理为今天）
     今天: 0,
-    明天: 1,
-    后天: 2,
+    今日: 0,
+    上午: 0,
+    下午: 0,
     今晚: 0,
+    今夜: 0,
+    早上: 0,
+    中午: 0,
+    晚上: 0,
+    夜里: 0,
+    
+    // 明日相关
+    明天: 1,
+    明日: 1,
+    明早: 1,
     明晚: 1,
+    明夜: 1,
+    
+    // 后日相关
+    后天: 2,
+    后日: 2,
+    
+    // 周相关
     下周: 7,
     下个月: 30,
     周一: this.getNextWeekday(1),
@@ -100,7 +119,11 @@ export class NaturalLanguageParser {
     if (result.dueTime) {
       // 移除已解析的时间文本
       result.title = result.title.replace(this.timeRegex, '').trim()
+      // 移除时间相关词汇（上午、下午、晚上等）
       result.title = result.title.replace(/[上下][午晚]/g, '').trim()
+      result.title = result.title.replace(/[早中晚夜]上?/g, '').trim()
+      // 移除"点"字
+      result.title = result.title.replace(/点/g, '').trim()
     }
 
     // 清理标题
@@ -148,14 +171,19 @@ export class NaturalLanguageParser {
     let parsedHour = parseInt(hour)
     const parsedMinute = minute ? parseInt(minute) : 0
 
-    // 处理上午/下午
-    if (input.includes('下午') || input.includes('晚上')) {
+    // 处理上午/下午/晚上等时间表达
+    if (input.includes('下午') || input.includes('晚上') || input.includes('今晚') || input.includes('今夜')) {
       if (parsedHour < 12) {
         parsedHour += 12
       }
-    } else if (input.includes('上午') || input.includes('早上')) {
+    } else if (input.includes('上午') || input.includes('早上') || input.includes('早')) {
       if (parsedHour === 12) {
         parsedHour = 0
+      }
+    } else if (input.includes('中午')) {
+      // 中午保持12点
+      if (parsedHour !== 12) {
+        parsedHour = 12
       }
     }
 
@@ -164,12 +192,14 @@ export class NaturalLanguageParser {
     return timeDate
   }
 
-  // 示例用法提示
+  // 示例用法提示 - 更新示例以展示新的时间表达
   static getExamples(): string[] {
     return [
       '明天下午3点 开会 @重要',
       '周五 完成项目报告 @工作',
       '今晚8点 看电影 @娱乐',
+      '上午10点 开会 #工作',
+      '下午2点 完成文档 #项目',
       '下周一 医生预约 @健康',
       '12月25日 圣诞聚会 @家庭',
       '紧急 修复生产bug @开发',

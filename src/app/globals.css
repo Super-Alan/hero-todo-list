@@ -26,3 +26,132 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom styles for markdown in chat messages */
+.prose {
+  color: inherit;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  color: inherit;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.prose h1 { font-size: 1.25em; }
+.prose h2 { font-size: 1.125em; }
+.prose h3 { font-size: 1em; }
+.prose h4,
+.prose h5,
+.prose h6 { font-size: 0.875em; }
+
+.prose p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  padding-left: 1.5em;
+}
+
+.prose li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.125em 0.25em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.prose pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.75em;
+  border-radius: 0.375em;
+  overflow-x: auto;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.prose blockquote {
+  border-left: 3px solid rgba(0, 0, 0, 0.2);
+  padding-left: 1em;
+  margin-left: 0;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  font-style: italic;
+}
+
+.prose strong {
+  font-weight: 600;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  color: #1d4ed8;
+}
+
+/* Smaller prose for thinking content */
+.prose-xs h1,
+.prose-xs h2,
+.prose-xs h3,
+.prose-xs h4,
+.prose-xs h5,
+.prose-xs h6 {
+  font-size: 0.75em;
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+}
+
+.prose-xs p {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose-xs ul,
+.prose-xs ol {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  padding-left: 1em;
+}
+
+.prose-xs li {
+  margin-top: 0.125em;
+  margin-bottom: 0.125em;
+}
+
+.prose-xs code {
+  font-size: 0.75em;
+}
+
+.prose-xs pre {
+  padding: 0.5em;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}

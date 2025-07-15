@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ModelService } from '@/lib/model-service'
+import { ModelService } from '../../../../../lib/model-service'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params
+  const { id } = resolvedParams
   try {
     // 使用统一的模型服务进行测试
-    const testResult = await ModelService.testModel(params.id)
+    const testResult = await ModelService.testModel(id)
 
     return NextResponse.json({
       success: true,

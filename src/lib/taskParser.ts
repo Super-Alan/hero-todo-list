@@ -29,41 +29,76 @@ function parseDateString(dateStr: string): Date {
 export function parseTaskFromInput(input: string): CreateTaskInput {
   let title = input.trim();
 
-  // 解析并移除标签
-  const tagRegex = /#([\w-]+)/g;
+  // 解析并移除标签 (#标签格式)
+  const tagRegex = /#([\w\u4e00-\u9fa5-]+)/g;
   const tags: string[] = [];
   title = title.replace(tagRegex, (match, tagName) => {
     tags.push(tagName);
     return '';
   }).trim();
 
-  // 解析并移除优先级
-  const highPriorityWords = ['紧急', '重要', '!!!', '!'];
-  const lowPriorityWords = ['有空', '稍后', '不急'];
+  // 解析并移除优先级 (!重要 格式)
+  const priorityRegex = /!([\w\u4e00-\u9fa5]+)/g;
   let priority: Priority | undefined = undefined;
+  
+  title = title.replace(priorityRegex, (match, priorityText) => {
+    // 优先级关键词映射
+    const priorityMap: { [key: string]: Priority } = {
+      '紧急': Priority.URGENT,
+      '重要': Priority.HIGH,
+      '高': Priority.HIGH,
+      '中': Priority.MEDIUM,
+      '低': Priority.LOW,
+      '一般': Priority.MEDIUM,
+      'urgent': Priority.URGENT,
+      'high': Priority.HIGH,
+      'medium': Priority.MEDIUM,
+      'low': Priority.LOW,
+    };
+    
+    const mappedPriority = priorityMap[priorityText];
+    if (mappedPriority && !priority) {
+      priority = mappedPriority;
+      return '';
+    }
+    return match; // 如果不是优先级关键词，保留原文本
+  });
 
+  // 解析并移除内联优先级关键词（不带!符号）
+  const highPriorityWords = ['紧急', '重要', '!!!'];
+  const mediumPriorityWords = ['中', '一般'];
+  const lowPriorityWords = ['有空', '稍后', '不急', '低'];
+  
   const words = title.split(/\s+/);
   const filteredWords: string[] = [];
-  let prioritySet = false;
-
+  
   words.forEach(word => {
-    if (!prioritySet) {
-      if (!prioritySet) {
-        const urgentWords = ['紧急', '!!!', 'urgent'];
-        if (urgentWords.some(p => word.includes(p))) {
-          priority = Priority.URGENT;
-          prioritySet = true;
-        } else if (highPriorityWords.some(p => word.includes(p))) {
-          priority = Priority.HIGH;
-          prioritySet = true;
-        } else if (lowPriorityWords.some(p => word.includes(p))) {
-          priority = Priority.LOW;
-          prioritySet = true;
+    if (!priority) {
+      if (highPriorityWords.some(p => word.includes(p))) {
+        priority = Priority.HIGH;
+        // 如果这个词就是优先级关键词，跳过它
+        if (highPriorityWords.includes(word)) {
+          return; // 跳过这个词
+        }
+      } else if (mediumPriorityWords.some(p => word.includes(p))) {
+        priority = Priority.MEDIUM;
+        // 如果这个词就是优先级关键词，跳过它
+        if (mediumPriorityWords.includes(word)) {
+          return; // 跳过这个词
+        }
+      } else if (lowPriorityWords.some(p => word.includes(p))) {
+        priority = Priority.LOW;
+        // 如果这个词就是优先级关键词，跳过它
+        if (lowPriorityWords.includes(word)) {
+          return; // 跳过这个词
         }
       }
     }
     filteredWords.push(word);
   });
+  
+  // 重新组合标题
+  title = filteredWords.join(' ').trim();
   
   // 简单的日期解析
   const timeRegex = /(今天|明天|后天|\d{4}-\d{2}-\d{2}|\d{1,2}月\d{1,2}日)/;

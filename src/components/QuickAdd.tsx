@@ -74,6 +74,7 @@ const QuickAdd = forwardRef<QuickAddHandle, QuickAddProps>(({ onTaskCreated }, r
 
       // 使用解析结果或原始输入
       const finalResult = parsedResult || { title: taskTitle.trim() }
+      console.log('[QuickAdd] Final result before processing tags:', finalResult);
       
       // 处理标签：根据标签名称获取或创建标签ID
       let tagIds: string[] = []
@@ -113,14 +114,16 @@ const QuickAdd = forwardRef<QuickAddHandle, QuickAddProps>(({ onTaskCreated }, r
       // 项目功能已移除
 
       // 创建任务
-      await api.createTask({
+      const taskData = {
         title: finalResult.title,
         description: finalResult.description,
         dueDate: finalResult.dueDate,
         dueTime: finalResult.dueTime,
         priority: finalResult.priority || 'MEDIUM',
-        tagIds: tagIds
-      })
+        tagIds: tagIds,
+      }
+      console.log('[QuickAdd] Data sent to API:', taskData);
+      await api.createTask(taskData)
 
       // 重置表单
       setTaskTitle('')
@@ -279,7 +282,7 @@ const QuickAdd = forwardRef<QuickAddHandle, QuickAddProps>(({ onTaskCreated }, r
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500">
-                提示：输入"明天下午3点 开会 @标签 重要"来快速设置属性。不存在的标签会自动创建。
+                提示：输入"明天下午3点 开会 @标签 重要"或"下午10点参加会议 #工作"来快速设置属性。不存在的标签会自动创建。
               </span>
             </div>
             <div className="flex items-center space-x-2">

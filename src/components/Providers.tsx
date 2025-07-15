@@ -2,6 +2,7 @@
 
 import { SessionProvider } from 'next-auth/react'
 import { Session } from 'next-auth'
+import { ModelProviderProvider } from '@/contexts/ModelProviderContext'
 
 interface ProvidersProps {
   children: React.ReactNode
@@ -11,7 +12,9 @@ interface ProvidersProps {
 export default function Providers({ children, session }: ProvidersProps) {
   return (
     <SessionProvider session={session}>
-      {children}
+      <ModelProviderProvider>
+        {children}
+      </ModelProviderProvider>
     </SessionProvider>
   )
 } 

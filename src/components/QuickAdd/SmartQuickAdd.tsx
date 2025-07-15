@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { QuickAddMode, QuickAddState, ModeDetectionResult, AIAnalysisResult, Message, ParsedTask, GeneratedTask } from '@/types/quickAdd'
 import { CreateTaskInput, Priority } from '@/types';
 import { ModeDetector } from '@/utils/modeDetector'
+import { tagService } from '@/lib/tagService'
 import ModeSelector from './ModeSelector'
 import FastModeInput from './FastMode/FastModeInput'
 import AIModeChat from './AIMode/AIModeChat'
@@ -169,26 +170,39 @@ const SmartQuickAdd: React.FC<SmartQuickAddProps> = ({
     });
   }, []);
 
-  const handleTasksConfirmed = (tasks: (ParsedTask | GeneratedTask)[]) => {
-    const finalTasks: CreateTaskInput[] = tasks.map(task => {
-      let priority: Priority | undefined;
-      if (task.priority) {
-        const p = task.priority.toUpperCase();
-        if (p === 'HIGH') priority = Priority.HIGH;
-        else if (p === 'MEDIUM') priority = Priority.MEDIUM;
-        else if (p === 'LOW') priority = Priority.LOW;
-      }
-      return {
-        title: task.title,
-        description: task.description,
-        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-        priority: priority,
-        tagIds: 'tags' in task ? task.tags : [],
-      }
-    });
-    setState(prev => ({ ...prev, isConfirming: false }));
-    onTasksAdded(finalTasks);
-    handleClose();
+  const handleTasksConfirmed = async (tasks: (ParsedTask | GeneratedTask)[]) => {
+    try {
+      const finalTasks: CreateTaskInput[] = await Promise.all(tasks.map(async task => {
+        let priority: Priority | undefined;
+        if (task.priority) {
+          const p = task.priority.toUpperCase();
+          if (p === 'HIGH') priority = Priority.HIGH;
+          else if (p === 'MEDIUM') priority = Priority.MEDIUM;
+          else if (p === 'LOW') priority = Priority.LOW;
+        }
+        
+        // 转换标签名为标签ID
+        let tagIds: string[] = [];
+        if ('tags' in task && task.tags && task.tags.length > 0) {
+          tagIds = await tagService.getOrCreateTagIds(task.tags);
+        }
+        
+        return {
+          title: task.title,
+          description: task.description,
+          dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+          priority: priority,
+          tagIds: tagIds,
+        }
+      }));
+      
+      setState(prev => ({ ...prev, isConfirming: false }));
+      onTasksAdded(finalTasks);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to process tasks:', error);
+      // 这里可以添加用户提示
+    }
   }
 
   const renderModeContent = () => {

@@ -117,6 +117,73 @@ export async function GET(request: NextRequest) {
           ]
         }
       ]
+    } else if (view === 'thisweek') {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const startOfWeek = new Date(today)
+      startOfWeek.setDate(today.getDate() - today.getDay()) // 本周开始（周日）
+      const endOfWeek = new Date(startOfWeek)
+      endOfWeek.setDate(startOfWeek.getDate() + 7) // 本周结束
+      
+      // 本周：本周截止的未完成任务
+      where.AND = [
+        { isCompleted: false },
+        {
+          OR: [
+            {
+              dueDate: {
+                gte: startOfWeek,
+                lt: endOfWeek
+              }
+            },
+            // 没有截止日期但创建于本周的任务
+            {
+              dueDate: null,
+              createdAt: {
+                gte: startOfWeek,
+                lt: endOfWeek
+              }
+            }
+          ]
+        }
+      ]
+    } else if (view === 'important') {
+      // 重要任务：高优先级或紧急的未完成任务
+      where.AND = [
+        { isCompleted: false },
+        {
+          priority: {
+            in: ['HIGH', 'URGENT']
+          }
+        }
+      ]
+    } else if (view === 'completed') {
+      // 已完成任务
+      where.isCompleted = true
+    } else if (view === 'recent') {
+      // 最近活动：最近7天创建或更新的任务
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      
+      where.OR = [
+        { createdAt: { gte: sevenDaysAgo } },
+        { updatedAt: { gte: sevenDaysAgo } }
+      ]
+    } else if (view === 'overdue') {
+      // 逾期任务：已过期但未完成的任务
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      where.AND = [
+        { isCompleted: false },
+        { dueDate: { lt: today } }
+      ]
+    } else if (view === 'nodate') {
+      // 无日期：没有截止日期的未完成任务
+      where.AND = [
+        { isCompleted: false },
+        { dueDate: null }
+      ]
     }
 
     // 排序

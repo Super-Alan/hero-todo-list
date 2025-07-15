@@ -4,11 +4,13 @@ import { useSession } from 'next-auth/react'
 import { api } from '@/lib/api';
 import { CreateTaskInput } from '@/types';
 import { useState, useRef } from 'react'
+import { tagService } from '@/lib/tagService'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import TaskList from './TaskList'
 import SmartQuickAdd from './QuickAdd/SmartQuickAdd'
 import TaskAddBar from './TaskAddBar'
+import AIChatPanel from './AIChatPanel';
 import { useKeyboardShortcuts, createShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 export default function Dashboard() {
@@ -21,8 +23,12 @@ export default function Dashboard() {
   const [showSmartQuickAdd, setShowSmartQuickAdd] = useState(false)
   const [quickAddInitialValue, setQuickAddInitialValue] = useState('')
   const sidebarRef = useRef<{ refreshTags: () => void; refreshTaskStats: () => void } | null>(null)
+  const [isAIChatPanelOpen, setIsAIChatPanelOpen] = useState(false);
 
-  const handleTaskCreated = () => {
+  const handleTaskCreated = async () => {
+    // 刷新标签缓存（因为可能创建了新标签）
+    await tagService.refreshCache();
+    
     // 刷新任务列表
     if (taskListRef.current) {
       taskListRef.current.refreshTasks()
@@ -46,17 +52,28 @@ export default function Dashboard() {
     }
   }
 
-    const handleOpenAdvancedAdd = (initialValue: string) => {
+  const handleOpenAdvancedAdd = (initialValue: string) => {
     setQuickAddInitialValue(initialValue);
     setShowSmartQuickAdd(true);
   };
 
-    const handleSimpleTaskSubmit = async (task: CreateTaskInput) => {
+  const handleSimpleTaskSubmit = async (task: CreateTaskInput) => {
     try {
-            await api.createTask(task);
+      await api.createTask(task);
       handleTaskCreated(); // 刷新列表和侧边栏
     } catch (error) {
       console.error('Failed to create task:', error);
+      // 这里可以添加一个用户提示，例如使用 react-hot-toast
+    }
+  };
+
+  const handleBatchTasksSubmit = async (tasks: CreateTaskInput[]) => {
+    try {
+      // 批量创建任务
+      await Promise.all(tasks.map(task => api.createTask(task)));
+      handleTaskCreated(); // 刷新列表和侧边栏
+    } catch (error) {
+      console.error('Failed to create tasks:', error);
       // 这里可以添加一个用户提示，例如使用 react-hot-toast
     }
   };
@@ -86,6 +103,10 @@ export default function Dashboard() {
   const handleClearSearch = () => {
     setSearchFilters(null)
   }
+
+  const handleToggleAIChatPanel = () => {
+    setIsAIChatPanelOpen(prev => !prev);
+  };
 
   // 定义快捷键
   const shortcuts = [
@@ -142,14 +163,13 @@ export default function Dashboard() {
       />
 
       {/* 主内容区域 */}
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isAIChatPanelOpen ? 'mr-96' : ''}`}>
         {/* 头部 */}
         <Header />
 
         {/* 主要内容 */}
         <main className="flex-1 overflow-auto p-6">
   
-          
           {/* 智能快速添加 */}
           <SmartQuickAdd
             isOpen={showSmartQuickAdd}
@@ -161,7 +181,9 @@ export default function Dashboard() {
           {/* 新的任务添加栏 */}
           <TaskAddBar 
             onTaskSubmit={handleSimpleTaskSubmit}
-            onOpenAdvanced={handleOpenAdvancedAdd} 
+            onTasksSubmit={handleBatchTasksSubmit}
+            onOpenAdvanced={handleOpenAdvancedAdd}
+            onToggleAIAssistant={handleToggleAIChatPanel}
           />
 
           {/* 任务列表 */}
@@ -174,6 +196,13 @@ export default function Dashboard() {
           />
         </main>
       </div>
+
+      {/* AI Chat Panel */}
+      <AIChatPanel
+        isOpen={isAIChatPanelOpen}
+        onClose={() => setIsAIChatPanelOpen(false)}
+        onTasksGenerated={handleBatchTasksSubmit}
+      />
 
       {/* 快捷键提示 */}
       <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 border border-gray-200 opacity-90">

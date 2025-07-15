@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Message, AIAnalysisResult } from '@/types/quickAdd'
-import DeepSeekAPI, { AnalysisStage, stageMessages } from '@/services/deepseekApi'
 
 interface AIModeProps {
   input: string
@@ -52,91 +51,77 @@ export default function AIModeChat({
     }
   }, [conversation.length, onConversationUpdate])
 
-  // 初始化 DeepSeek API 客户端
-  const deepseekApi = useRef(new DeepSeekAPI())
+ 
   
   const handleSendMessage = async () => {
-    const messageContent = currentInput.trim() || input.trim()
-    if (!messageContent) return
+    const messageContent = currentInput.trim() || input.trim();
+    if (!messageContent) return;
 
-    // 添加用户消息
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
       content: messageContent,
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    };
 
-    const updatedConversation = [...conversation, userMessage]
-    onConversationUpdate(updatedConversation)
-    setCurrentInput('')
-    onInputChange('')
+    let updatedConversation = [...conversation, userMessage];
+    onConversationUpdate(updatedConversation);
+    setCurrentInput('');
+    onInputChange('');
+    onAnalysisStart();
 
-    // 开始 AI 分析
-    onAnalysisStart()
-    
     try {
-      // 添加分析进度消息
-      const handleStageChange = (stage: AnalysisStage) => {
-        const stageMessage: Message = {
-          id: `stage-${stage}`,
-          type: 'system',
-          content: stageMessages[stage],
-          timestamp: new Date()
-        }
-        
-        // 更新或添加阶段消息
-        const stageMessageIndex = updatedConversation.findIndex(msg => 
-          msg.id.startsWith('stage-')
-        )
-        
-        if (stageMessageIndex >= 0) {
-          const newConversation = [...updatedConversation]
-          newConversation[stageMessageIndex] = stageMessage
-          onConversationUpdate(newConversation)
-        } else {
-          onConversationUpdate([...updatedConversation, stageMessage])
-        }
+      const systemMessage: Message = {
+        id: `system-${Date.now()}`,
+        type: 'system',
+        content: 'AI 正在分析你的目标，请稍候... 🚀',
+        timestamp: new Date(),
+      };
+      updatedConversation = [...updatedConversation, systemMessage];
+      onConversationUpdate(updatedConversation);
+
+      const response = await fetch('/api/ai/analyze-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: messageContent }),
+      });
+
+      // 移除“正在分析”的消息
+      updatedConversation = updatedConversation.filter(msg => msg.id !== systemMessage.id);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'AI analysis failed');
       }
-      
-      // 调用 DeepSeek API 分析目标
-      const result = await deepseekApi.current.analyzeGoal(
-        updatedConversation,
-        handleStageChange
-      )
-      
-      // 分析完成，更新结果
-      onAnalysisComplete(result)
-      
-      // 添加 AI 回复消息
+
+      const result: AIAnalysisResult = await response.json();
+      onAnalysisComplete(result);
+
       const aiMessage: Message = {
         id: `ai-${Date.now()}`,
         type: 'ai',
         content: `我已经分析了你的目标，并创建了一个任务计划。\n\n这个计划包含 ${result.phases.length} 个阶段，总共 ${result.totalTasks} 个任务，预计需要 ${result.estimatedDuration}。\n\n你可以查看下方的任务清单，选择你想要添加的阶段和任务。`,
-        timestamp: new Date()
-      }
-      
-      // 移除进度消息，添加 AI 回复
-      const finalConversation = updatedConversation.filter(msg => 
-        !msg.id.startsWith('stage-')
-      )
-      
-      onConversationUpdate([...finalConversation, aiMessage])
+        timestamp: new Date(),
+      };
+      onConversationUpdate([...updatedConversation, aiMessage]);
+
     } catch (error) {
-      console.error('AI analysis failed:', error)
-      
-      // 添加错误消息
+      const errorMessageContent = error instanceof Error ? error.message : '未知错误，请稍后再试。';
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         type: 'system',
-        content: '很抱歉，分析过程中出现了错误。请稍后再试，或者尝试提供更详细的目标描述。',
-        timestamp: new Date()
-      }
+        content: `分析失败：${errorMessageContent}`,
+        timestamp: new Date(),
+      };
       
-      onConversationUpdate([...updatedConversation, errorMessage])
-      onAnalysisComplete(null) // 重置分析状态
+      // 移除“正在分析”的消息并添加错误消息
+      const finalConversation = conversation.filter(msg => !msg.id.startsWith('system-'));
+      onConversationUpdate([...finalConversation, userMessage, errorMessage]);
+      onAnalysisComplete(null);
     }
-  }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

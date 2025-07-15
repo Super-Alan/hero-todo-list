@@ -5,16 +5,21 @@ import { parseTaskFromInput } from '@/lib/taskParser';
 import { CreateTaskInput } from '@/types';
 import { Priority } from '@/types';
 import { CalendarIcon, TagIcon, FlagIcon } from '@heroicons/react/24/outline';
+import { tagService } from '@/lib/tagService';
+import AIChatPanel from './AIChatPanel';
 
 interface TaskAddBarProps {
   onTaskSubmit: (task: CreateTaskInput) => void;
+  onTasksSubmit?: (tasks: CreateTaskInput[]) => void;
   onOpenAdvanced: (initialValue: string) => void;
+  onToggleAIAssistant?: () => void;
 }
 
-const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onOpenAdvanced }) => {
+const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onTasksSubmit, onOpenAdvanced, onToggleAIAssistant }) => {
   const [isActive, setIsActive] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [parsedTask, setParsedTask] = useState<CreateTaskInput | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -33,12 +38,32 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onOpenAdvanced })
     }
   }, [inputValue]);
 
-  const handleSubmit = () => {
-    if (parsedTask && parsedTask.title) {
-      onTaskSubmit(parsedTask);
+  const handleSubmit = async () => {
+    if (!parsedTask || !parsedTask.title || isProcessing) {
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      // 转换标签名为标签ID
+      let finalTask = { ...parsedTask };
+      
+      if (parsedTask.tagIds && parsedTask.tagIds.length > 0) {
+        // 将标签名转换为标签ID（如果标签不存在会自动创建）
+        const tagIds = await tagService.getOrCreateTagIds(parsedTask.tagIds);
+        finalTask.tagIds = tagIds;
+      }
+
+      await onTaskSubmit(finalTask);
       setInputValue('');
       setParsedTask(null);
       setIsActive(false);
+    } catch (error) {
+      console.error('Failed to process task:', error);
+      // 这里可以添加用户提示，比如使用 toast 通知
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -72,6 +97,12 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onOpenAdvanced })
     onOpenAdvanced(inputValue);
     setInputValue('');
     setIsActive(false);
+  };
+
+  const handleAIAssistant = () => {
+    if (onToggleAIAssistant) {
+      onToggleAIAssistant();
+    }
   };
 
   if (!isActive) {
@@ -111,6 +142,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onOpenAdvanced })
         onKeyDown={handleKeyDown}
         placeholder="输入任务后按 Enter 保存"
         className="w-full focus:outline-none text-base bg-transparent"
+        disabled={isProcessing}
       />
       {parsedTask && (
         <div className="flex items-center flex-wrap gap-2 mt-2 text-xs text-gray-500">
@@ -136,17 +168,29 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onOpenAdvanced })
       )}
       <div className="flex justify-end items-center mt-2 pt-2 border-t border-gray-100">
         <button
-          onClick={handleAdvancedAdd}
-          className="text-xs text-blue-600 hover:text-blue-800 mr-4 font-medium"
+          onClick={handleAIAssistant}
+          className="text-xs text-blue-600 hover:text-blue-800 mr-4 font-medium flex items-center space-x-1"
+          disabled={isProcessing}
         >
-          🤖 AI 助手
+          <span>🤖</span>
+          <span>AI 助手</span>
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!parsedTask || !parsedTask.title}
-          className="px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium disabled:bg-blue-300 hover:bg-blue-700 transition-colors"
+          disabled={!parsedTask || !parsedTask.title || isProcessing}
+          className="px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium disabled:bg-blue-300 hover:bg-blue-700 transition-colors flex items-center"
         >
-          保存
+          {isProcessing ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              处理中...
+            </>
+          ) : (
+            '保存'
+          )}
         </button>
       </div>
     </div>

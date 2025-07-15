@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma'
 // 获取单个模型
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const model = await prisma.modelProvider.findUnique({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     if (!model) {
@@ -31,9 +32,10 @@ export async function GET(
 // 更新模型
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const body = await request.json()
     const { name, description, endpoint, apiKey, isActive } = body
 
@@ -47,7 +49,7 @@ export async function PUT(
 
     // 检查模型是否存在
     const existingModel = await prisma.modelProvider.findUnique({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     if (!existingModel) {
@@ -61,7 +63,7 @@ export async function PUT(
     const nameConflict = await prisma.modelProvider.findFirst({
       where: {
         name,
-        id: { not: params.id }
+        id: { not: resolvedParams.id }
       }
     })
 
@@ -73,7 +75,7 @@ export async function PUT(
     }
 
     const updatedModel = await prisma.modelProvider.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         name,
         description,
@@ -93,15 +95,19 @@ export async function PUT(
   }
 }
 
-// 删除模型
-export async function DELETE(
+// 部分更新模型
+export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
+    const body = await request.json()
+    const { apiKey, isActive } = body
+
     // 检查模型是否存在
     const existingModel = await prisma.modelProvider.findUnique({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     if (!existingModel) {
@@ -111,20 +117,49 @@ export async function DELETE(
       )
     }
 
-    // 检查是否有相关评估数据
-    const evaluationCount = await prisma.promptEvaluation.count({
-      where: { modelId: params.id }
+    // 构建更新数据
+    const updateData: any = {}
+    if (apiKey !== undefined) updateData.apiKey = apiKey
+    if (isActive !== undefined) updateData.isActive = isActive
+
+    const updatedModel = await prisma.modelProvider.update({
+      where: { id: resolvedParams.id },
+      data: updateData
     })
 
-    if (evaluationCount > 0) {
+    return NextResponse.json(updatedModel)
+  } catch (error) {
+    console.error('更新模型失败:', error)
+    return NextResponse.json(
+      { error: '更新模型失败' },
+      { status: 500 }
+    )
+  }
+}
+
+// 删除模型
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const resolvedParams = await params
+    // 检查模型是否存在
+    const existingModel = await prisma.modelProvider.findUnique({
+      where: { id: resolvedParams.id }
+    })
+
+    if (!existingModel) {
       return NextResponse.json(
-        { error: '该模型已有评估数据，无法删除。请先停用模型。' },
-        { status: 400 }
+        { error: '模型不存在' },
+        { status: 404 }
       )
     }
 
+    // 可以直接删除模型
+
     await prisma.modelProvider.delete({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     return NextResponse.json({ message: '模型删除成功' })

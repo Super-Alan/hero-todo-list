@@ -2,15 +2,14 @@ import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
 // 根据endpoint推断provider类型
-function inferProviderFromEndpoint(endpoint: string | null): string {
-  if (!endpoint) return 'Unknown'
+function inferProviderFromEndpoint(endpoint: string | null): 'OpenAI' | 'Anthropic' | 'Aliyun' | 'Baidu' | 'VolcEngine' | 'Generic' {
+  if (!endpoint) return 'Generic'
   
   if (endpoint.includes('openai.com')) return 'OpenAI'
   if (endpoint.includes('anthropic.com')) return 'Anthropic'
   if (endpoint.includes('baidubce.com')) return 'Baidu'
-  if (endpoint.includes('aliyuncs.com')) return 'Qwen'
+  if (endpoint.includes('aliyuncs.com') || endpoint.includes('dashscope.aliyuncs.com')) return 'Aliyun'
   if (endpoint.includes('volcengine.com') || endpoint.includes('volces.com')) return 'VolcEngine'
-  if (endpoint.includes('dashscope.aliyuncs.com')) return 'Qwen'
   
   return 'Generic'
 }
@@ -21,9 +20,7 @@ export async function GET() {
     // 从数据库获取已配置且激活的模型列表
     const models = await prisma.modelProvider.findMany({
       where: {
-        isActive: true,
-        endpoint: { not: null },
-        apiKey: { not: null }
+        isActive: true
       },
       select: {
         id: true,
@@ -42,10 +39,7 @@ export async function GET() {
       id: model.id,
       name: model.name,
       description: model.description,
-      type: model.endpoint?.includes('openai') ? 'OpenAI' :
-            model.endpoint?.includes('anthropic') ? 'Anthropic' :
-            model.endpoint?.includes('aliyun') ? 'Aliyun' :
-            'Other'
+      type: inferProviderFromEndpoint(model.endpoint)
     }))
 
     return NextResponse.json({ models: formattedModels })
