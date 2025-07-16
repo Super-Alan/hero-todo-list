@@ -78,6 +78,21 @@ class ApiClient {
     })
   }
 
+  // 获取任务统计数据
+  async getTaskStats(): Promise<{
+    all: number
+    today: number
+    upcoming: number
+    thisweek: number
+    important: number
+    completed: number
+    recent: number
+    overdue: number
+    nodate: number
+  }> {
+    return this.request('/tasks/stats')
+  }
+
   // 标签相关 API
   async getTags(params?: {
     includeStats?: boolean

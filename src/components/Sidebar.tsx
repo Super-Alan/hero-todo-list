@@ -2,7 +2,7 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Calendar, CheckCircle, Clock, Plus, Tag, Inbox, Loader2, Settings, X, Edit2, Search, AlertTriangle, Star, History, AlertCircle, Calendar as CalendarIcon, Sparkles } from 'lucide-react'
-import { api } from '@/lib/api'
+import { useTaskData } from '@/contexts/TaskDataContext'
 import { TagWithDetails } from '@/types'
 
 interface SidebarProps {
@@ -23,10 +23,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
   onViewSelect,
   onTagSelect
 }, ref) => {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [taskStats, setTaskStats] = useState<any>({})
-  const [tags, setTags] = useState<TagWithDetails[]>([])
+  const { state, fetchTags, fetchTaskStats, createTask, updateTask, deleteTask } = useTaskData()
   const [showTagManagement, setShowTagManagement] = useState(false)
   const [showTagForm, setShowTagForm] = useState(false)
   const [tagName, setTagName] = useState('')
@@ -43,22 +40,17 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
-    refreshTags: fetchTags,
+    refreshTags: () => fetchTags({ includeStats: true }),
     refreshTaskStats: fetchTaskStats
   }))
 
-  useEffect(() => {
-    fetchTaskStats()
-    fetchTags()
-  }, [])
-
   // 搜索过滤和排序效果
   useEffect(() => {
-    let filtered = tags
+    let filtered = state.tags
     
     // 搜索过滤
     if (searchQuery.trim()) {
-      filtered = tags.filter(tag => 
+      filtered = state.tags.filter(tag => 
         tag.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
@@ -79,78 +71,18 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
     })
     
     setFilteredTags(sorted)
-  }, [tags, searchQuery, sortBy])
-
-  const fetchTags = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await api.getTags({ includeStats: true })
-      setTags(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '获取标签失败')
-      console.error('获取标签失败:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchTaskStats = async () => {
-    try {
-      const [
-        todayTasks, 
-        upcomingTasks, 
-        allTasks, 
-        importantTasks, 
-        completedTasks, 
-        recentTasks, 
-        overdueTasks, 
-        nodateTasks, 
-        thisweekTasks
-      ] = await Promise.all([
-        api.getTasks({ view: 'today' }),
-        api.getTasks({ view: 'upcoming' }),
-        api.getTasks({ view: 'all' }),
-        api.getTasks({ view: 'important' }),
-        api.getTasks({ view: 'completed' }),
-        api.getTasks({ view: 'recent' }),
-        api.getTasks({ view: 'overdue' }),
-        api.getTasks({ view: 'nodate' }),
-        api.getTasks({ view: 'thisweek' })
-      ])
-
-      setTaskStats({
-        today: todayTasks.length,
-        upcoming: upcomingTasks.length,
-        all: allTasks.length,
-        important: importantTasks.length,
-        completed: completedTasks.length,
-        recent: recentTasks.length,
-        overdue: overdueTasks.length,
-        nodate: nodateTasks.length,
-        thisweek: thisweekTasks.length
-      })
-    } catch (err) {
-      console.error('获取任务统计失败:', err)
-    }
-  }
+  }, [state.tags, searchQuery, sortBy])
 
   const createTag = async () => {
     if (!tagName.trim() || tagCreating) return
 
     try {
       setTagCreating(true)
-      const newTag = await api.createTag({
-        name: tagName.trim(),
-        color: tagColor
-      })
-      
-      setTags([...tags, newTag])
+      await fetchTags({ includeStats: true }) // 刷新标签列表
       setTagName('')
       setTagColor('#6b7280')
       setShowTagForm(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '创建标签失败')
       console.error('创建标签失败:', err)
     } finally {
       setTagCreating(false)
@@ -161,10 +93,8 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
     if (!confirm('确定要删除这个标签吗？')) return
 
     try {
-      await api.deleteTag(tagId)
-      setTags(tags.filter(tag => tag.id !== tagId))
+      await fetchTags({ includeStats: true }) // 刷新标签列表
     } catch (err) {
-      setError(err instanceof Error ? err.message : '删除标签失败')
       console.error('删除标签失败:', err)
     }
   }
@@ -180,18 +110,11 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
 
     try {
       setTagUpdating(true)
-      const updatedTag = await api.updateTag(editingTag, {
-        id: editingTag,
-        name: editTagName.trim(),
-        color: editTagColor
-      })
-      
-      setTags(tags.map(tag => tag.id === editingTag ? { ...tag, ...updatedTag } : tag))
+      await fetchTags({ includeStats: true }) // 刷新标签列表
       setEditingTag(null)
       setEditTagName('')
       setEditTagColor('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : '更新标签失败')
       console.error('更新标签失败:', err)
     } finally {
       setTagUpdating(false)
@@ -226,18 +149,18 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
   ]
 
   const basicViews = [
-    { id: 'today', name: '今天', icon: Calendar, count: taskStats.today || 0 },
-    { id: 'upcoming', name: '即将到来', icon: Clock, count: taskStats.upcoming || 0 },
-    { id: 'thisweek', name: '本周', icon: CalendarIcon, count: taskStats.thisweek || 0 },
-    { id: 'all', name: '所有任务', icon: Inbox, count: taskStats.all || 0 },
+    { id: 'today', name: '今天', icon: Calendar, count: state.taskStats.today || 0 },
+    { id: 'upcoming', name: '即将到来', icon: Clock, count: state.taskStats.upcoming || 0 },
+    { id: 'thisweek', name: '本周', icon: CalendarIcon, count: state.taskStats.thisweek || 0 },
+    { id: 'all', name: '所有任务', icon: Inbox, count: state.taskStats.all || 0 },
   ]
 
   const smartViews = [
-    { id: 'important', name: '重要任务', icon: Star, count: taskStats.important || 0, color: 'text-amber-600' },
-    { id: 'overdue', name: '逾期任务', icon: AlertTriangle, count: taskStats.overdue || 0, color: 'text-red-600' },
-    { id: 'nodate', name: '无日期', icon: AlertCircle, count: taskStats.nodate || 0, color: 'text-gray-500' },
-    { id: 'recent', name: '最近活动', icon: History, count: taskStats.recent || 0 },
-    { id: 'completed', name: '已完成', icon: CheckCircle, count: taskStats.completed || 0, color: 'text-green-600' },
+    { id: 'important', name: '重要任务', icon: Star, count: state.taskStats.important || 0, color: 'text-amber-600' },
+    { id: 'overdue', name: '逾期任务', icon: AlertTriangle, count: state.taskStats.overdue || 0, color: 'text-red-600' },
+    { id: 'nodate', name: '无日期', icon: AlertCircle, count: state.taskStats.nodate || 0, color: 'text-gray-500' },
+    { id: 'recent', name: '最近活动', icon: History, count: state.taskStats.recent || 0 },
+    { id: 'completed', name: '已完成', icon: CheckCircle, count: state.taskStats.completed || 0, color: 'text-green-600' },
   ]
 
   return (
@@ -336,22 +259,22 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
             </button>
           </div>
           
-          {loading && (
+          {state.loading && (
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
             </div>
           )}
           
-          {error && (
+          {state.error && (
             <div className="text-sm text-red-600 px-3 py-2">
-              {error}
+              {state.error}
             </div>
           )}
           
-          {!loading && !error && (
+          {!state.loading && !state.error && (
             !showTagManagement ? (
               <div className="space-y-1">
-                {tags.slice(0, 5).map((tag) => (
+                {state.tags.slice(0, 5).map((tag) => (
                   <button
                     key={tag.id}
                     onClick={() => handleTagClick(tag.id)}
@@ -373,12 +296,12 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
                     </span>
                   </button>
                 ))}
-                {tags.length > 5 && (
+                {state.tags.length > 5 && (
                   <button
                     onClick={() => setShowTagManagement(true)}
                     className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
                   >
-                    查看更多 ({tags.length - 5})
+                    查看更多 ({state.tags.length - 5})
                   </button>
                 )}
                 
@@ -634,12 +557,12 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
         <div className="space-y-2 text-xs text-purple-200">
           <div className="flex items-center justify-between">
             <span>总标签数</span>
-            <span className="font-medium">{tags.length}</span>
+            <span className="font-medium">{state.tags.length}</span>
           </div>
           <div className="flex items-center justify-between">
             <span>已使用标签</span>
             <span className="font-medium">
-              {tags.filter(tag => (tag as any).stats?.totalTasks > 0).length}
+              {state.tags.filter(tag => (tag as any).stats?.totalTasks > 0).length}
             </span>
           </div>
           {selectedTag && (
@@ -650,7 +573,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
               </div>
               <div className="mt-1 ml-5 space-y-1">
                 {(() => {
-                  const currentTag = tags.find(tag => tag.id === selectedTag)
+                  const currentTag = state.tags.find(tag => tag.id === selectedTag)
                   const stats = (currentTag as any)?.stats
                   return stats ? (
                     <>

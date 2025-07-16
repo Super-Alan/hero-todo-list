@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { CogIcon, CheckIcon, XMarkIcon, ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { CogIcon, CheckIcon, XMarkIcon, ArrowPathIcon, ExclamationTriangleIcon, EyeIcon, EyeSlashIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useModelProvider } from '@/contexts/ModelProviderContext'
 
 interface ModelProvider {
@@ -27,6 +27,7 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
   const [editForm, setEditForm] = useState<Partial<ModelProvider>>({})
   const [testStatus, setTestStatus] = useState<Record<string, { status: TestStatus; message?: string }>>({}) 
   const [globalError, setGlobalError] = useState<string | null>(null)
+  const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({})
 
   const { refreshModels } = useModelProvider()
 
@@ -133,6 +134,24 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
     }
   }
 
+  // 删除模型
+  const handleDelete = async (modelId: string) => {
+    if (!window.confirm('确定要删除该模型？此操作不可恢复。')) return
+    setGlobalError(null)
+    try {
+      const response = await fetch(`/api/models/${modelId}`, { method: 'DELETE' })
+      if (response.ok) {
+        await fetchModels()
+        await refreshModels()
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '删除失败')
+      }
+    } catch (error) {
+      setGlobalError(error instanceof Error ? error.message : '删除失败')
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -183,16 +202,25 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                   <div key={model.id} className="card-modern rounded-xl p-5 hover:shadow-tech transition-all duration-300 animate-slide-up">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold text-gray-900 text-lg">{model.name}</h3>
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={model.isActive}
-                          onChange={(e) => toggleModelStatus(model.id, e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="relative w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                        <span className="ms-3 text-sm font-medium text-gray-700">启用</span>
-                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={model.isActive}
+                            onChange={(e) => toggleModelStatus(model.id, e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="relative w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                          <span className="ms-3 text-sm font-medium text-gray-700">启用</span>
+                        </label>
+                        <button
+                          onClick={() => handleDelete(model.id)}
+                          className="ml-2 p-2 rounded-xl hover:bg-red-50 transition-colors"
+                          title="删除模型"
+                        >
+                          <TrashIcon className="w-5 h-5 text-red-500" />
+                        </button>
+                      </div>
                     </div>
                     
                     {model.description && (
@@ -201,13 +229,23 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
 
                     {editingModel === model.id ? (
                       <div className="space-y-4">
-                        <input
-                          type="password"
-                          value={editForm.apiKey || ''}
-                          onChange={(e) => setEditForm({ ...editForm, apiKey: e.target.value })}
-                          placeholder="输入您的 API Key"
-                          className="input-modern w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-                        />
+                        <div className="relative flex items-center">
+                          <input
+                            type={showApiKey[model.id] ? 'text' : 'password'}
+                            value={editForm.apiKey || ''}
+                            onChange={(e) => setEditForm({ ...editForm, apiKey: e.target.value })}
+                            placeholder="输入您的 API Key"
+                            className="input-modern w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700"
+                            onClick={() => setShowApiKey(s => ({ ...s, [model.id]: !s[model.id] }))}
+                            tabIndex={-1}
+                          >
+                            {showApiKey[model.id] ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                          </button>
+                        </div>
                         <div className="flex justify-end space-x-3">
                           <button 
                             onClick={handleCancel} 
@@ -226,11 +264,21 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                       </div>
                     ) : (
                       <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                          API Key: 
+                        <div className="text-sm text-gray-600 flex items-center gap-2">
+                          API Key:
                           <span className={`ml-1 font-medium ${model.apiKey ? 'text-green-600' : 'text-red-600'}`}>
-                            {model.apiKey ? '已配置' : '未配置'}
+                            {showApiKey[model.id] ? (model.apiKey || '未配置') : (model.apiKey ? '******' : '未配置')}
                           </span>
+                          {model.apiKey && (
+                            <button
+                              type="button"
+                              className="p-1 text-gray-400 hover:text-gray-700"
+                              onClick={() => setShowApiKey(s => ({ ...s, [model.id]: !s[model.id] }))}
+                              tabIndex={-1}
+                            >
+                              {showApiKey[model.id] ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                            </button>
+                          )}
                         </div>
                         <div className="flex items-center space-x-3">
                           {model.apiKey && (

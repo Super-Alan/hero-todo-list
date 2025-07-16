@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, Circle, Calendar, Flag, MoreHorizontal, Loader2, GripVertical, Edit2, Trash2, ExternalLink, Square, CheckSquare, X, Plus, ChevronDown, ChevronRight } from 'lucide-react'
 import { 
   DndContext, 
@@ -24,7 +25,7 @@ import {
   useSortable 
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { api } from '@/lib/api'
+import { useTaskData } from '@/contexts/TaskDataContext'
 import { TaskWithDetails } from '@/types'
 import TaskDetail from './TaskDetail'
 
@@ -76,6 +77,7 @@ const SortableTask = ({
   const [isEditing, setIsEditing] = useState(false)
   const [editingTitle, setEditingTitle] = useState(task.title)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<'top' | 'bottom'>('bottom')
   const quickActionsRef = useRef<HTMLDivElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
 
@@ -96,13 +98,33 @@ const SortableTask = ({
   // 点击外部关闭菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
+      // 检查点击是否在菜单按钮或菜单内部
+      const target = event.target as Node
+      const isMenuButton = quickActionsRef.current?.contains(target)
+      
+      // 检查点击是否在菜单内部（菜单现在在 document.body 上）
+      const menuElement = document.querySelector('[data-menu-id="task-menu"]')
+      const isMenuContent = menuElement?.contains(target)
+      
+      if (!isMenuButton && !isMenuContent) {
         setShowQuickActions(false)
       }
     }
 
     if (showQuickActions) {
       document.addEventListener('mousedown', handleClickOutside)
+      // 添加 ESC 键关闭菜单
+      const handleEscape = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          setShowQuickActions(false)
+        }
+      }
+      document.addEventListener('keydown', handleEscape)
+      
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('keydown', handleEscape)
+      }
     }
 
     return () => {
@@ -164,6 +186,41 @@ const SortableTask = ({
       e.preventDefault()
       handleEditingCancel()
     }
+  }
+
+  // 计算菜单位置
+  const calculateMenuPosition = () => {
+    if (quickActionsRef.current) {
+      const rect = quickActionsRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
+      const menuHeight = 200 // 预估菜单高度
+      const menuWidth = 192 // 菜单宽度
+      
+      // 检查右侧空间
+      const rightSpace = viewportWidth - rect.right
+      const leftSpace = rect.left
+      
+      // 如果下方空间不足，则显示在上方
+      if (rect.bottom + menuHeight > viewportHeight) {
+        setMenuPosition('top')
+      } else {
+        setMenuPosition('bottom')
+      }
+      
+      // 如果右侧空间不足，可以考虑调整水平位置
+      if (rightSpace < menuWidth && leftSpace > menuWidth) {
+        // 可以在这里添加向左偏移的逻辑
+      }
+    }
+  }
+
+  // 处理菜单点击
+  const handleMenuClick = () => {
+    if (!showQuickActions) {
+      calculateMenuPosition()
+    }
+    setShowQuickActions(!showQuickActions)
   }
 
   return (
@@ -325,44 +382,64 @@ const SortableTask = ({
         {/* 操作按钮 */}
         <div className="relative" ref={quickActionsRef}>
           <button 
-            onClick={() => setShowQuickActions(!showQuickActions)}
-            className="text-gray-400 hover:text-gray-600"
+            onClick={handleMenuClick}
+            className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition-colors"
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
           
           {/* 快速操作菜单 */}
-          {showQuickActions && (
-            <div className="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10">
+          {showQuickActions && createPortal(
+            <div 
+              data-menu-id="task-menu"
+              className="fixed w-48 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-gray-200/50 py-2 z-[9999]"
+              style={{
+                maxHeight: '300px',
+                overflowY: 'auto',
+                minWidth: '192px',
+                top: quickActionsRef.current ? 
+                  (menuPosition === 'top' ? 
+                    quickActionsRef.current.getBoundingClientRect().top - 200 : 
+                    quickActionsRef.current.getBoundingClientRect().bottom + 8
+                  ) : 0,
+                left: quickActionsRef.current ? 
+                  quickActionsRef.current.getBoundingClientRect().right - 192 : 0
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
                   onOpenDetail(task.id)
                   setShowQuickActions(false)
                 }}
-                className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors rounded-lg mx-1"
               >
                 <ExternalLink className="h-4 w-4" />
                 <span>查看详情</span>
               </button>
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
                   onOpenDetail(task.id)
                   setShowQuickActions(false)
                 }}
-                className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors rounded-lg mx-1"
               >
                 <Edit2 className="h-4 w-4" />
                 <span>编辑任务</span>
               </button>
               
-
-              
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
                   onToggleComplete(task.id)
                   setShowQuickActions(false)
                 }}
-                className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors rounded-lg mx-1"
               >
                 {task.isCompleted ? (
                   <>
@@ -376,18 +453,21 @@ const SortableTask = ({
                   </>
                 )}
               </button>
-              <hr className="my-2" />
+              <hr className="my-2 mx-2 border-gray-200" />
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
                   onDeleteTask(task.id)
                   setShowQuickActions(false)
                 }}
-                className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors rounded-lg mx-1"
               >
                 <Trash2 className="h-4 w-4" />
                 <span>删除任务</span>
               </button>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
@@ -396,6 +476,7 @@ const SortableTask = ({
 }
 
 const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, selectedTag, onSidebarRefresh }, ref) => {
+  const { fetchTasks, updateTask, deleteTask } = useTaskData()
   const [tasks, setTasks] = useState<TaskWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -407,7 +488,6 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
   const [bulkEditMode, setBulkEditMode] = useState(false)
   const [bulkOperationLoading, setBulkOperationLoading] = useState(false)
 
-
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -417,10 +497,10 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
 
   // 获取任务数据
   useEffect(() => {
-    fetchTasks()
+    loadTasks()
   }, [selectedView, selectedTag])
 
-  const fetchTasks = async () => {
+  const loadTasks = async () => {
     try {
       setLoading(true)
       setError(null)
@@ -435,7 +515,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
         params.view = selectedView
       }
       
-      const data = await api.getTasks(params)
+      const data = await fetchTasks(params)
       setTasks(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取任务失败')
@@ -445,11 +525,9 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
     }
   }
 
-
-
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
-    refreshTasks: fetchTasks
+    refreshTasks: loadTasks
   }))
 
   const toggleComplete = async (taskId: string) => {
@@ -457,7 +535,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       const task = tasks.find(t => t.id === taskId)
       if (!task) return
 
-      const updatedTask = await api.updateTask(taskId, {
+      const updatedTask = await updateTask(taskId, {
         id: taskId,
         isCompleted: !task.isCompleted
       })
@@ -484,7 +562,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
     if (!confirm('确定要删除这个任务吗？')) return
 
     try {
-      await api.deleteTask(taskId)
+      await deleteTask(taskId)
       setTasks(tasks.filter(t => t.id !== taskId))
       
       // 刷新侧边栏统计
@@ -497,12 +575,12 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
   }
 
   const handleTaskUpdated = () => {
-    fetchTasks()
+    loadTasks()
   }
 
   const handleTaskTitleUpdate = async (taskId: string, updates: { title: string }) => {
     try {
-      const updatedTask = await api.updateTask(taskId, {
+      const updatedTask = await updateTask(taskId, {
         id: taskId,
         title: updates.title
       })
@@ -519,7 +597,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
   const handleTaskDeleted = () => {
     setShowTaskDetail(false)
     setSelectedTaskId(null)
-    fetchTasks()
+    loadTasks()
   }
 
   const handleSelectTask = (taskId: string) => {
@@ -552,7 +630,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       // 批量更新任务状态
       await Promise.all(
         selectedTaskIds.map(taskId =>
-          api.updateTask(taskId, {
+          updateTask(taskId, {
             id: taskId,
             isCompleted: targetStatus
           })
@@ -588,7 +666,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       setBulkOperationLoading(true)
       
       await Promise.all(
-        selectedTaskIds.map(taskId => api.deleteTask(taskId))
+        selectedTaskIds.map(taskId => deleteTask(taskId))
       )
 
       setTasks(tasks.filter(t => !selectedTaskIds.includes(t.id)))
@@ -659,7 +737,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       // 批量更新任务排序
       await Promise.all(
         sortUpdates.map(update => 
-          api.updateTask(update.id, { id: update.id, sortOrder: update.sortOrder })
+          updateTask(update.id, { id: update.id, sortOrder: update.sortOrder })
         )
       )
     } catch (err) {

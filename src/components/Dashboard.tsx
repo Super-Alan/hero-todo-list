@@ -1,10 +1,9 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { api } from '@/lib/api';
 import { CreateTaskInput } from '@/types';
 import { useState, useRef } from 'react'
-import { tagService } from '@/lib/tagService'
+import { useTaskData } from '@/contexts/TaskDataContext'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import TaskList from './TaskList'
@@ -16,6 +15,7 @@ import { useKeyboardShortcuts, createShortcuts } from '@/hooks/useKeyboardShortc
 
 export default function Dashboard() {
   const { data: session } = useSession()
+  const { createTask, refreshAll } = useTaskData()
   const [selectedView, setSelectedView] = useState<'today' | 'upcoming' | 'all' | 'important' | 'completed' | 'recent' | 'overdue' | 'nodate' | 'thisweek' | 'tag'>('today')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [searchFilters, setSearchFilters] = useState<any>(null)
@@ -28,8 +28,8 @@ export default function Dashboard() {
   const [showModelSettings, setShowModelSettings] = useState(false);
 
   const handleTaskCreated = async () => {
-    // 刷新标签缓存（因为可能创建了新标签）
-    await tagService.refreshCache();
+    // 刷新所有数据
+    await refreshAll();
     
     // 刷新任务列表
     if (taskListRef.current) {
@@ -61,7 +61,7 @@ export default function Dashboard() {
 
   const handleSimpleTaskSubmit = async (task: CreateTaskInput) => {
     try {
-      await api.createTask(task);
+      await createTask(task);
       handleTaskCreated(); // 刷新列表和侧边栏
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -72,7 +72,7 @@ export default function Dashboard() {
   const handleBatchTasksSubmit = async (tasks: CreateTaskInput[]) => {
     try {
       // 批量创建任务
-      await Promise.all(tasks.map(task => api.createTask(task)));
+      await Promise.all(tasks.map(task => createTask(task)));
       handleTaskCreated(); // 刷新列表和侧边栏
     } catch (error) {
       console.error('Failed to create tasks:', error);
