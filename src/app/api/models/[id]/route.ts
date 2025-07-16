@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 // 获取单个模型
 export async function GET(
@@ -7,9 +9,25 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+    }
+
     const resolvedParams = await params
-    const model = await prisma.modelProvider.findUnique({
-      where: { id: resolvedParams.id }
+    const model = await prisma.modelProvider.findFirst({
+      where: { 
+        id: resolvedParams.id,
+        userId: user.id
+      }
     })
 
     if (!model) {
@@ -35,6 +53,19 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+    }
+
     const resolvedParams = await params
     const body = await request.json()
     const { name, description, endpoint, apiKey, isActive } = body
@@ -47,9 +78,12 @@ export async function PUT(
       )
     }
 
-    // 检查模型是否存在
-    const existingModel = await prisma.modelProvider.findUnique({
-      where: { id: resolvedParams.id }
+    // 检查模型是否存在且属于当前用户
+    const existingModel = await prisma.modelProvider.findFirst({
+      where: { 
+        id: resolvedParams.id,
+        userId: user.id
+      }
     })
 
     if (!existingModel) {
@@ -59,10 +93,11 @@ export async function PUT(
       )
     }
 
-    // 检查名称冲突（排除当前模型）
+    // 检查名称冲突（排除当前模型，且在同一用户下）
     const nameConflict = await prisma.modelProvider.findFirst({
       where: {
         name,
+        userId: user.id,
         id: { not: resolvedParams.id }
       }
     })
@@ -101,13 +136,29 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+    }
+
     const resolvedParams = await params
     const body = await request.json()
     const { apiKey, isActive } = body
 
-    // 检查模型是否存在
-    const existingModel = await prisma.modelProvider.findUnique({
-      where: { id: resolvedParams.id }
+    // 检查模型是否存在且属于当前用户
+    const existingModel = await prisma.modelProvider.findFirst({
+      where: { 
+        id: resolvedParams.id,
+        userId: user.id
+      }
     })
 
     if (!existingModel) {
@@ -143,10 +194,27 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+    }
+
     const resolvedParams = await params
-    // 检查模型是否存在
-    const existingModel = await prisma.modelProvider.findUnique({
-      where: { id: resolvedParams.id }
+    
+    // 检查模型是否存在且属于当前用户
+    const existingModel = await prisma.modelProvider.findFirst({
+      where: { 
+        id: resolvedParams.id,
+        userId: user.id
+      }
     })
 
     if (!existingModel) {
@@ -156,8 +224,7 @@ export async function DELETE(
       )
     }
 
-    // 可以直接删除模型
-
+    // 删除模型
     await prisma.modelProvider.delete({
       where: { id: resolvedParams.id }
     })

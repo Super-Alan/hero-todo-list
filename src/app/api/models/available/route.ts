@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 // 根据endpoint推断provider类型
 function inferProviderFromEndpoint(endpoint: string | null): 'OpenAI' | 'Anthropic' | 'Aliyun' | 'Baidu' | 'VolcEngine' | 'Generic' {
@@ -14,12 +16,26 @@ function inferProviderFromEndpoint(endpoint: string | null): 'OpenAI' | 'Anthrop
   return 'Generic'
 }
 
-// 获取所有可用的模型（仅返回活跃状态的模型）
+// 获取当前用户的可用模型（仅返回活跃状态的模型）
 export async function GET() {
   try {
-    // 从数据库获取已配置且激活的模型列表
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+    }
+
+    // 从数据库获取当前用户已配置且激活的模型列表
     const models = await prisma.modelProvider.findMany({
       where: {
+        userId: user.id,
         isActive: true
       },
       select: {

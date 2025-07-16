@@ -1,9 +1,21 @@
-import { PrismaClient } from '../src/generated/prisma'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 async function seedModels() {
   console.log('Seeding model providers...')
+
+  // 首先创建或获取测试用户
+  const testUser = await prisma.user.upsert({
+    where: { email: 'test@example.com' },
+    update: {},
+    create: {
+      email: 'test@example.com',
+      name: 'Test User'
+    }
+  })
+
+  console.log(`Using test user: ${testUser.email}`)
 
   // Create default model providers
   const models = [
@@ -32,13 +44,20 @@ async function seedModels() {
 
   for (const model of models) {
     try {
-      const existing = await prisma.modelProvider.findUnique({
-        where: { name: model.name }
+      // 使用复合唯一约束查询
+      const existing = await prisma.modelProvider.findFirst({
+        where: { 
+          name: model.name,
+          userId: testUser.id
+        }
       })
 
       if (!existing) {
         await prisma.modelProvider.create({
-          data: model
+          data: {
+            ...model,
+            userId: testUser.id
+          }
         })
         console.log(`✓ Created model provider: ${model.name}`)
       } else {
