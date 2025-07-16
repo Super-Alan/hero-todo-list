@@ -93,6 +93,25 @@ class ApiClient {
     return this.request('/tasks/stats')
   }
 
+  // 搜索任务
+  async searchTasks(params: {
+    query: string
+    limit?: number
+    includeCompleted?: boolean
+  }): Promise<{
+    tasks: TaskWithDetails[]
+    total: number
+    query: string
+  }> {
+    const searchParams = new URLSearchParams()
+    searchParams.append('q', params.query)
+    if (params.limit) searchParams.append('limit', params.limit.toString())
+    if (params.includeCompleted !== undefined) searchParams.append('includeCompleted', params.includeCompleted.toString())
+    
+    const query = `?${searchParams.toString()}`
+    return this.request(`/tasks/search${query}`)
+  }
+
   // 标签相关 API
   async getTags(params?: {
     includeStats?: boolean

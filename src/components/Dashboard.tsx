@@ -19,6 +19,8 @@ export default function Dashboard() {
   const [selectedView, setSelectedView] = useState<'today' | 'upcoming' | 'all' | 'important' | 'completed' | 'recent' | 'overdue' | 'nodate' | 'thisweek' | 'tag'>('today')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [searchFilters, setSearchFilters] = useState<any>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
   const taskListRef = useRef<{ refreshTasks: () => void } | null>(null)
   const quickAddRef = useRef<{ focus: () => void; blur: () => void; isOpen: boolean } | null>(null)
   const [showSmartQuickAdd, setShowSmartQuickAdd] = useState(false)
@@ -106,6 +108,23 @@ export default function Dashboard() {
     setSearchFilters(null)
   }
 
+  // 处理搜索查询
+  const handleSearchQuery = (query: string) => {
+    setSearchQuery(query)
+    setIsSearching(query.trim().length > 0)
+    
+    if (query.trim().length > 0) {
+      setSelectedView('all') // 搜索时切换到所有任务视图
+      setSelectedTag(null)
+    }
+  }
+
+  // 清除搜索查询
+  const handleClearSearchQuery = () => {
+    setSearchQuery('')
+    setIsSearching(false)
+  }
+
   const handleToggleAIChatPanel = () => {
     setIsAIChatPanelOpen(prev => !prev);
   };
@@ -167,7 +186,12 @@ export default function Dashboard() {
       {/* 主内容区域 */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isAIChatPanelOpen ? 'mr-96' : ''}`}>
         {/* 头部 */}
-        <Header onOpenModelSettings={() => setShowModelSettings(true)} />
+        <Header 
+          onOpenModelSettings={() => setShowModelSettings(true)}
+          onSearch={handleSearchQuery}
+          onClearSearch={handleClearSearchQuery}
+          searchQuery={searchQuery}
+        />
 
         {/* 主要内容 */}
         <main className="flex-1 overflow-auto p-6 animate-fade-in">
@@ -194,6 +218,8 @@ export default function Dashboard() {
             selectedView={selectedView}
             selectedTag={selectedTag}
             searchFilters={searchFilters}
+            searchQuery={searchQuery}
+            isSearching={isSearching}
             onSidebarRefresh={handleRefreshSidebar}
           />
         </main>

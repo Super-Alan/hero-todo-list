@@ -28,11 +28,14 @@ import { CSS } from '@dnd-kit/utilities'
 import { useTaskData } from '@/contexts/TaskDataContext'
 import { TaskWithDetails } from '@/types'
 import TaskDetail from './TaskDetail'
+import { api } from '@/lib/api'
 
 interface TaskListProps {
   selectedView: 'today' | 'upcoming' | 'all' | 'important' | 'completed' | 'recent' | 'overdue' | 'nodate' | 'thisweek' | 'tag'
   selectedTag?: string | null
   searchFilters?: any
+  searchQuery?: string
+  isSearching?: boolean
   onSidebarRefresh?: () => void
 }
 
@@ -475,7 +478,7 @@ const SortableTask = ({
   )
 }
 
-const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, selectedTag, onSidebarRefresh }, ref) => {
+const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, selectedTag, searchQuery, isSearching, onSidebarRefresh }, ref) => {
   const { fetchTasks, updateTask, deleteTask } = useTaskData()
   const [tasks, setTasks] = useState<TaskWithDetails[]>([])
   const [loading, setLoading] = useState(true)
@@ -487,6 +490,8 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
   const [bulkEditMode, setBulkEditMode] = useState(false)
   const [bulkOperationLoading, setBulkOperationLoading] = useState(false)
+  const [searchResults, setSearchResults] = useState<TaskWithDetails[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -497,8 +502,12 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
 
   // 获取任务数据
   useEffect(() => {
-    loadTasks()
-  }, [selectedView, selectedTag])
+    if (isSearching && searchQuery?.trim()) {
+      loadSearchResults()
+    } else {
+      loadTasks()
+    }
+  }, [selectedView, selectedTag, searchQuery, isSearching])
 
   const loadTasks = async () => {
     try {
@@ -522,6 +531,26 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       console.error('获取任务失败:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadSearchResults = async () => {
+    try {
+      setSearchLoading(true)
+      setError(null)
+      
+      const result = await api.searchTasks({
+        query: searchQuery?.trim() || '',
+        limit: 50,
+        includeCompleted: true
+      })
+      
+      setSearchResults(result.tasks)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '搜索任务失败')
+      console.error('搜索任务失败:', err)
+    } finally {
+      setSearchLoading(false)
     }
   }
 
@@ -609,10 +638,11 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
   }
 
   const handleSelectAll = () => {
-    if (selectedTaskIds.length === tasks.length) {
+    const currentTasks = isSearching ? searchResults : tasks
+    if (selectedTaskIds.length === currentTasks.length) {
       setSelectedTaskIds([])
     } else {
-      setSelectedTaskIds(tasks.map(t => t.id))
+      setSelectedTaskIds(currentTasks.map(t => t.id))
     }
   }
 
@@ -638,11 +668,13 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       )
 
       // 更新本地状态
-      setTasks(tasks.map(t => 
-        selectedTaskIds.includes(t.id) 
-          ? { ...t, isCompleted: targetStatus }
-          : t
-      ))
+      const updateTaskStatus = (task: TaskWithDetails) => 
+        selectedTaskIds.includes(task.id) 
+          ? { ...task, isCompleted: targetStatus }
+          : task
+
+      setTasks(tasks.map(updateTaskStatus))
+      setSearchResults(searchResults.map(updateTaskStatus))
 
       setSelectedTaskIds([])
       setBulkEditMode(false)
@@ -670,6 +702,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       )
 
       setTasks(tasks.filter(t => !selectedTaskIds.includes(t.id)))
+      setSearchResults(searchResults.filter(t => !selectedTaskIds.includes(t.id)))
       setSelectedTaskIds([])
       setBulkEditMode(false)
       
@@ -791,6 +824,10 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
   }
 
   const getViewTitle = () => {
+    if (isSearching && searchQuery?.trim()) {
+      return `搜索: "${searchQuery}"`
+    }
+    
     if (selectedTag) {
       // 获取标签名称
       const task = tasks.find(task => task.tags?.some(tag => tag.id === selectedTag))
@@ -821,7 +858,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
     })
   }
 
-  if (loading) {
+  if (loading || searchLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <div className="relative mb-4">
@@ -830,7 +867,9 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
           </div>
           <div className="absolute -top-2 -right-2 w-4 h-4 bg-neon-blue rounded-full animate-pulse"></div>
         </div>
-        <span className="text-gray-600 font-medium">加载中...</span>
+        <span className="text-gray-600 font-medium">
+          {isSearching ? '搜索中...' : '加载中...'}
+        </span>
         <div className="flex items-center space-x-2 mt-4">
           <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
           <div className="w-2 h-2 bg-neon-purple rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
@@ -884,7 +923,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
           <span className="text-sm text-gray-600 font-medium">
-            {tasks.length} 个任务
+            {isSearching ? searchResults.length : tasks.length} 个任务
           </span>
         </div>
       </div>
@@ -898,13 +937,13 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
                 onClick={handleSelectAll}
                 className="flex items-center space-x-2 text-sm text-primary-700 hover:text-primary-900 transition-colors"
               >
-                {selectedTaskIds.length === tasks.length ? (
+                {selectedTaskIds.length === (isSearching ? searchResults.length : tasks.length) ? (
                   <CheckSquare className="h-4 w-4" />
                 ) : (
                   <Square className="h-4 w-4" />
                 )}
                 <span className="font-medium">
-                  {selectedTaskIds.length === tasks.length ? '取消全选' : '全选'}
+                  {selectedTaskIds.length === (isSearching ? searchResults.length : tasks.length) ? '取消全选' : '全选'}
                 </span>
               </button>
               <div className="flex items-center space-x-2">
@@ -955,9 +994,9 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={(isSearching ? searchResults : tasks).map(t => t.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
-            {tasks.map((task) => (
+            {(isSearching ? searchResults : tasks).map((task) => (
               <SortableTask
                 key={task.id}
                 task={task}
@@ -999,7 +1038,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
       </DndContext>
 
       {/* 空状态 */}
-      {tasks.length === 0 && (
+      {(isSearching ? searchResults.length === 0 : tasks.length === 0) && (
         <div className="text-center py-16">
           <div className="relative mb-6">
             <div className="w-24 h-24 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center mx-auto animate-float">
@@ -1008,8 +1047,12 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
             <div className="absolute -top-2 -right-2 w-6 h-6 bg-neon-blue rounded-full animate-pulse-glow"></div>
             <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-neon-purple rounded-full animate-pulse-glow" style={{animationDelay: '0.5s'}}></div>
           </div>
-          <h3 className="text-2xl font-bold gradient-text mb-3">没有任务</h3>
-          <p className="text-gray-600 text-lg mb-6">创建您的第一个任务开始使用吧！</p>
+          <h3 className="text-2xl font-bold gradient-text mb-3">
+            {isSearching ? '没有找到相关任务' : '没有任务'}
+          </h3>
+          <p className="text-gray-600 text-lg mb-6">
+            {isSearching ? `没有找到包含 "${searchQuery}" 的任务` : '创建您的第一个任务开始使用吧！'}
+          </p>
           <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>

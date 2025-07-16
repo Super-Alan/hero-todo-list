@@ -7,24 +7,85 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
-    
-    // 解析查询参数
+    const view = searchParams.get('view')
     const tagId = searchParams.get('tagId')
-    const tagIds = searchParams.get('tagIds')?.split(',').filter(Boolean)
+    const search = searchParams.get('search') // 新增搜索参数
     const priority = searchParams.get('priority')
     const status = searchParams.get('status')
-    const isCompleted = searchParams.get('isCompleted')
-    const search = searchParams.get('search')
-    const view = searchParams.get('view') // today, upcoming, all
-    
+
     // 构建查询条件
-    const where: any = {
-      userId: session.user.id,
+    const where: any = { userId: user.id }
+
+    // 视图过滤
+    if (view) {
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+
+      switch (view) {
+        case 'today':
+          where.dueDate = {
+            gte: today,
+            lt: tomorrow
+          }
+          break
+        case 'upcoming':
+          where.dueDate = {
+            gt: now
+          }
+          where.isCompleted = false
+          break
+        case 'overdue':
+          where.dueDate = {
+            lt: now
+          }
+          where.isCompleted = false
+          break
+        case 'completed':
+          where.isCompleted = true
+          break
+        case 'important':
+          where.priority = {
+            in: ['HIGH', 'URGENT']
+          }
+          break
+        case 'recent':
+          const weekAgo = new Date(now)
+          weekAgo.setDate(weekAgo.getDate() - 7)
+          where.updatedAt = {
+            gt: weekAgo
+          }
+          break
+        case 'nodate':
+          where.dueDate = null
+          where.isCompleted = false
+          break
+        case 'thisweek':
+          const weekStart = new Date(today)
+          weekStart.setDate(today.getDate() - today.getDay())
+          const weekEnd = new Date(weekStart)
+          weekEnd.setDate(weekStart.getDate() + 6)
+          where.dueDate = {
+            gte: weekStart,
+            lte: weekEnd
+          }
+          where.isCompleted = false
+          break
+      }
     }
 
     // 标签过滤
@@ -34,12 +95,37 @@ export async function GET(request: NextRequest) {
           tagId: tagId
         }
       }
-    } else if (tagIds && tagIds.length > 0) {
-      where.taskTags = {
-        some: {
-          tagId: { in: tagIds }
+    }
+
+    // 搜索过滤
+    if (search && search.trim()) {
+      const searchTerm = search.trim()
+      where.OR = [
+        {
+          title: {
+            contains: searchTerm,
+            mode: 'insensitive'
+          }
+        },
+        {
+          description: {
+            contains: searchTerm,
+            mode: 'insensitive'
+          }
+        },
+        {
+          taskTags: {
+            some: {
+              tag: {
+                name: {
+                  contains: searchTerm,
+                  mode: 'insensitive'
+                }
+              }
+            }
+          }
         }
-      }
+      ]
     }
 
     // 优先级过滤
@@ -49,173 +135,26 @@ export async function GET(request: NextRequest) {
 
     // 状态过滤
     if (status) {
-      where.status = status
+      if (status === 'completed') {
+        where.isCompleted = true
+      } else if (status === 'pending') {
+        where.isCompleted = false
+      }
     }
 
-    // 完成状态过滤
-    if (isCompleted !== null) {
-      where.isCompleted = isCompleted === 'true'
-    }
-
-    // 搜索过滤
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ]
-    }
-
-    // 视图过滤
-    if (view === 'today') {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      
-      // 今天视图：只显示今天截止的任务和过期的未完成任务
-      where.OR = [
-        // 今天截止的任务
-        { 
-          dueDate: { 
-            gte: today, 
-            lt: tomorrow 
-          } 
-        },
-        // 过期的未完成任务
-        { 
-          dueDate: { lt: today },
-          isCompleted: false
-        },
-        // 没有截止日期但创建于今天的任务
-        {
-          dueDate: null,
-          createdAt: { gte: today, lt: tomorrow }
-        }
-      ]
-    } else if (view === 'upcoming') {
-      const today = new Date()
-      today.setHours(23, 59, 59, 999) // 今天结束时间
-      const nextWeek = new Date(today)
-      nextWeek.setDate(nextWeek.getDate() + 7)
-      
-      // 即将到来：未完成且截止日期在未来7天内的任务
-      where.AND = [
-        { isCompleted: false },
-        {
-          OR: [
-            {
-              dueDate: {
-                gt: today,
-                lte: nextWeek
-              }
-            },
-            // 没有截止日期但不是今天创建的未完成任务
-            {
-              dueDate: null,
-              createdAt: { lt: today }
-            }
-          ]
-        }
-      ]
-    } else if (view === 'thisweek') {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const startOfWeek = new Date(today)
-      startOfWeek.setDate(today.getDate() - today.getDay()) // 本周开始（周日）
-      const endOfWeek = new Date(startOfWeek)
-      endOfWeek.setDate(startOfWeek.getDate() + 7) // 本周结束
-      
-      // 本周：本周截止的未完成任务
-      where.AND = [
-        { isCompleted: false },
-        {
-          OR: [
-            {
-              dueDate: {
-                gte: startOfWeek,
-                lt: endOfWeek
-              }
-            },
-            // 没有截止日期但创建于本周的任务
-            {
-              dueDate: null,
-              createdAt: {
-                gte: startOfWeek,
-                lt: endOfWeek
-              }
-            }
-          ]
-        }
-      ]
-    } else if (view === 'important') {
-      // 重要任务：高优先级或紧急的未完成任务
-      where.AND = [
-        { isCompleted: false },
-        {
-          priority: {
-            in: ['HIGH', 'URGENT']
-          }
-        }
-      ]
-    } else if (view === 'completed') {
-      // 已完成任务
-      where.isCompleted = true
-    } else if (view === 'recent') {
-      // 最近活动：最近7天创建或更新的任务
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      
-      where.OR = [
-        { createdAt: { gte: sevenDaysAgo } },
-        { updatedAt: { gte: sevenDaysAgo } }
-      ]
-    } else if (view === 'overdue') {
-      // 逾期任务：已过期但未完成的任务
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      where.AND = [
-        { isCompleted: false },
-        { dueDate: { lt: today } }
-      ]
-    } else if (view === 'nodate') {
-      // 无日期：没有截止日期的未完成任务
-      where.AND = [
-        { isCompleted: false },
-        { dueDate: null }
-      ]
-    }
-
-    // 排序
-    const sortField = searchParams.get('sortField') || 'createdAt'
-    const sortDirection = searchParams.get('sortDirection') || 'desc'
-    
-    const orderBy: any = {}
-    orderBy[sortField] = sortDirection
-
-    // 获取任务
     const tasks = await prisma.task.findMany({
       where,
-      orderBy,
       include: {
         taskTags: {
           include: {
             tag: true
           }
-        },
-        subTasks: {
-          orderBy: { sortOrder: 'asc' }
-        },
-        parentTask: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
         }
-      }
+      },
+      orderBy: [
+        { sortOrder: 'asc' },
+        { createdAt: 'desc' }
+      ]
     })
 
     // 转换数据格式
@@ -226,8 +165,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedTasks)
   } catch (error) {
-    console.error('获取任务列表失败:', error)
-    return NextResponse.json({ error: '获取任务列表失败' }, { status: 500 })
+    console.error('获取任务失败:', error)
+    return NextResponse.json(
+      { error: '获取任务失败' },
+      { status: 500 }
+    )
   }
 }
 
