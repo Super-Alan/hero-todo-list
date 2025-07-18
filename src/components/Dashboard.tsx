@@ -238,31 +238,7 @@ export default function Dashboard() {
         onClose={() => setShowModelSettings(false)}
       />
 
-      {/* 快捷键提示 */}
-      <div className="fixed bottom-6 right-6 glass rounded-2xl p-4 shadow-tech backdrop-blur-md border border-white/20">
-        <div className="text-sm text-gray-700 space-y-2">
-          <div className="flex items-center space-x-2 mb-3">
-            <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
-            <div className="font-semibold text-gray-800 gradient-text">快捷键</div>
-          </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-gray-600">快速添加</span>
-            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-mono">⌘N</span>
-          </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-gray-600">刷新列表</span>
-            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-mono">⌘R</span>
-          </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-gray-600">切换视图</span>
-            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-mono">1/2/3</span>
-          </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-gray-600">关闭</span>
-            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-mono">ESC</span>
-          </div>
-        </div>
-      </div>
+    
     </div>
   )
 } 
