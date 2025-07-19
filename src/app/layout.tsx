@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import Providers from '@/components/Providers'
 import '@/lib/polyfills'
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -61,6 +62,7 @@ export default async function RootLayout({
         <Providers session={session}>
           {children}
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   );
