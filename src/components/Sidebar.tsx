@@ -164,23 +164,23 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
   ]
 
   return (
-    <aside className="w-64 bg-gradient-to-b from-slate-800 via-purple-900 to-indigo-900 border-r border-white/20 flex flex-col backdrop-blur-md shadow-tech">
+    <aside className="w-full h-full bg-gradient-to-b from-slate-800 via-purple-900 to-indigo-900 border-r border-white/20 flex flex-col backdrop-blur-md shadow-tech">
       {/* 应用标题 */}
-              <div className="p-6 border-b border-white/20 bg-gradient-to-r from-purple-500/20 to-indigo-500/20">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-tech animate-pulse-glow">
-                <Sparkles className="h-7 w-7 text-white" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-400 rounded-full animate-pulse"></div>
-              <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-indigo-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+      <div className="p-6 border-b border-white/20 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 flex-shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-tech animate-pulse-glow">
+              <Sparkles className="h-7 w-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-indigo-300 bg-clip-text text-transparent">Hero ToDo</h1>
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-400 rounded-full animate-pulse"></div>
+            <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-indigo-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
           </div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-indigo-300 bg-clip-text text-transparent">Hero ToDo</h1>
         </div>
+      </div>
 
       {/* 主要视图 */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {/* 基础视图 */}
         <div className="mb-6">
           <h2 className="text-xs font-semibold text-purple-300 uppercase tracking-wider mb-3">
@@ -553,7 +553,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({
       </nav>
 
       {/* 底部统计 */}
-      <div className="p-4 border-t border-white/20 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
+      <div className="p-4 border-t border-white/20 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 flex-shrink-0">
         <div className="space-y-2 text-xs text-purple-200">
           <div className="flex items-center justify-between">
             <span>总标签数</span>

@@ -29,6 +29,68 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* 移动端优化 */
+@media (max-width: 768px) {
+  /* 防止双击缩放 */
+  * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* 允许输入框选择文本 */
+  input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+  
+  /* 优化触摸目标大小 */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* 优化滚动 */
+  .overflow-auto, .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 防止水平滚动 */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* 优化字体大小 */
+  html {
+    font-size: 16px;
+  }
+  
+  /* 优化间距 */
+  .p-4 {
+    padding: 1rem;
+  }
+  
+  .p-6 {
+    padding: 1.25rem;
+  }
+  
+  /* 优化卡片样式 */
+  .card-modern {
+    border-radius: 0.75rem;
+  }
+  
+  /* 优化按钮样式 */
+  .btn-modern {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+  }
+}
+
 /* 现代滚动条 */
 ::-webkit-scrollbar {
   width: 8px;
@@ -88,43 +150,68 @@ body {
 
 /* 现代按钮样式 */
 .btn-modern {
-  @apply relative overflow-hidden transition-all duration-300 ease-out;
-  @apply bg-gradient-to-r from-primary-500 to-primary-600;
-  @apply hover:from-primary-600 hover:to-primary-700;
-  @apply shadow-modern hover:shadow-tech;
-  @apply transform hover:scale-105 active:scale-95;
+  @apply bg-gradient-to-r from-primary-500 to-primary-600 text-white font-medium px-6 py-3 rounded-xl shadow-modern hover:shadow-tech transition-all duration-300 transform hover:scale-105 active:scale-95;
 }
 
-.btn-modern::before {
-  content: '';
-  @apply absolute inset-0 bg-gradient-to-r from-white/20 to-transparent;
-  @apply transform -skew-x-12 -translate-x-full;
-  @apply transition-transform duration-700 ease-out;
+.btn-modern:disabled {
+  @apply bg-gray-300 text-gray-500 shadow-none transform-none cursor-not-allowed;
 }
 
-.btn-modern:hover::before {
-  @apply translate-x-full;
+/* 现代输入框样式 */
+.input-modern {
+  @apply bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-modern focus:shadow-tech transition-all duration-300;
 }
 
 /* 现代卡片样式 */
 .card-modern {
-  @apply bg-white/80 backdrop-blur-sm;
-  @apply border border-white/20;
-  @apply shadow-modern hover:shadow-tech;
-  @apply transition-all duration-300 ease-out;
-  @apply hover:transform hover:scale-[1.02];
+  @apply bg-white/90 backdrop-blur-md border border-white/20 shadow-modern hover:shadow-tech transition-all duration-300;
 }
 
-/* 输入框现代样式 */
-.input-modern {
-  @apply bg-white/50 backdrop-blur-sm;
-  @apply border border-white/30;
-  @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
-  @apply transition-all duration-200 ease-out;
-  @apply placeholder:text-gray-400;
+/* 现代阴影效果 */
+.shadow-modern {
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* 动画类 */
+.shadow-tech {
+  box-shadow: 0 20px 40px -12px rgba(14, 165, 233, 0.25);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(0, 212, 255, 0.6); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.5s ease-in-out;
 }
@@ -133,8 +220,130 @@ body {
   animation: slideUp 0.3s ease-out;
 }
 
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+
 .animate-scale-in {
   animation: scaleIn 0.2s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
+/* 响应式工具类 */
+@media (max-width: 640px) {
+  .sm\:hidden { display: none; }
+  .sm\:block { display: block; }
+  .sm\:flex { display: flex; }
+  .sm\:grid { display: grid; }
+}
+
+@media (max-width: 768px) {
+  .md\:hidden { display: none; }
+  .md\:block { display: block; }
+  .md\:flex { display: flex; }
+  .md\:grid { display: grid; }
+}
+
+@media (max-width: 1024px) {
+  .lg\:hidden { display: none; }
+  .lg\:block { display: block; }
+  .lg\:flex { display: flex; }
+  .lg\:grid { display: grid; }
+}
+
+/* 移动端特定样式 */
+.mobile-optimized {
+  /* 触摸友好的间距 */
+  touch-action: manipulation;
+}
+
+.mobile-optimized button {
+  /* 确保按钮有足够的触摸区域 */
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.mobile-optimized input {
+  /* 防止移动端缩放 */
+  font-size: 16px;
+}
+
+/* 移动端侧边栏动画 */
+.mobile-sidebar-enter {
+  transform: translateX(-100%);
+}
+
+.mobile-sidebar-enter-active {
+  transform: translateX(0);
+  transition: transform 300ms ease-in-out;
+}
+
+.mobile-sidebar-exit {
+  transform: translateX(0);
+}
+
+.mobile-sidebar-exit-active {
+  transform: translateX(-100%);
+  transition: transform 300ms ease-in-out;
+}
+
+/* 移动端面板动画 */
+.mobile-panel-enter {
+  transform: translateX(100%);
+}
+
+.mobile-panel-enter-active {
+  transform: translateX(0);
+  transition: transform 300ms ease-in-out;
+}
+
+.mobile-panel-exit {
+  transform: translateX(0);
+}
+
+.mobile-panel-exit-active {
+  transform: translateX(100%);
+  transition: transform 300ms ease-in-out;
+}
+
+/* 移动端优化滚动 */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* 移动端安全区域 */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* 移动端状态栏样式 */
+.status-bar {
+  height: env(safe-area-inset-top);
+  background: linear-gradient(135deg, #0ea5e9 0%, #7c3aed 100%);
 }
 
 /* Custom styles for markdown in chat messages */

@@ -19,15 +19,15 @@ async function seedModels() {
   for (const model of models) {
     const existing = await prisma.modelProvider.findFirst({
       where: { userId: testUser.id, name: model.name }
-    })
-    if (!existing) {
-      await prisma.modelProvider.create({
-        data: { ...model, userId: testUser.id }
       })
+      if (!existing) {
+        await prisma.modelProvider.create({
+        data: { ...model, userId: testUser.id }
+        })
       console.log(`✓ Created: ${model.name}`)
-    } else {
+      } else {
       console.log(`- Exists: ${model.name}`)
-    }
+      }
   }
 }
 

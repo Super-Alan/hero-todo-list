@@ -13,9 +13,16 @@ interface TaskAddBarProps {
   onTasksSubmit?: (tasks: CreateTaskInput[]) => void;
   onOpenAdvanced: (initialValue: string) => void;
   onToggleAIAssistant?: () => void;
+  isMobile?: boolean;
 }
 
-const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onTasksSubmit, onOpenAdvanced, onToggleAIAssistant }) => {
+const TaskAddBar: React.FC<TaskAddBarProps> = ({ 
+  onTaskSubmit, 
+  onTasksSubmit, 
+  onOpenAdvanced, 
+  onToggleAIAssistant,
+  isMobile = false
+}) => {
   const [isActive, setIsActive] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [parsedTask, setParsedTask] = useState<CreateTaskInput | null>(null);
@@ -107,14 +114,14 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onTasksSubmit, on
 
   if (!isActive) {
     return (
-      <div className="mb-6">
+      <div className="mb-4 lg:mb-6">
         <button
           onClick={() => setIsActive(true)}
-          className="w-full flex items-center card-modern p-4 rounded-2xl text-left group hover:shadow-tech transition-all duration-300"
+          className="w-full flex items-center card-modern p-3 lg:p-4 rounded-xl lg:rounded-2xl text-left group hover:shadow-tech transition-all duration-300"
         >
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-modern group-hover:shadow-tech transition-all duration-300 mr-4">
+          <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg lg:rounded-xl flex items-center justify-center shadow-modern group-hover:shadow-tech transition-all duration-300 mr-3 lg:mr-4">
             <svg
-              className="w-5 h-5 text-white group-hover:scale-110 transition-transform"
+              className="w-4 h-4 lg:w-5 lg:h-5 text-white group-hover:scale-110 transition-transform"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -128,59 +135,61 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onTasksSubmit, on
               />
             </svg>
           </div>
-          <span className="text-gray-600 group-hover:text-gray-800 transition-colors">添加任务，例如：明天下午3点开会 #工作 !重要</span>
+          <span className="text-sm lg:text-base text-gray-600 group-hover:text-gray-800 transition-colors">
+            {isMobile ? '添加任务...' : '添加任务，例如：明天下午3点开会 #工作 !重要'}
+          </span>
         </button>
       </div>
     );
   }
 
   return (
-    <div ref={wrapperRef} className="mb-6 card-modern p-4 rounded-2xl border-2 border-primary-500/30 shadow-tech">
+    <div ref={wrapperRef} className="mb-4 lg:mb-6 card-modern p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 border-primary-500/30 shadow-tech">
       <input
         ref={inputRef}
         type="text"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="输入任务后按 Enter 保存"
-        className="w-full focus:outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
+        placeholder={isMobile ? "输入任务..." : "输入任务后按 Enter 保存"}
+        className="w-full focus:outline-none text-sm lg:text-base bg-transparent text-gray-800 placeholder:text-gray-400"
         disabled={isProcessing}
       />
       {parsedTask && (
-        <div className="flex items-center flex-wrap gap-2 mt-3 text-xs">
+        <div className="flex items-center flex-wrap gap-1 lg:gap-2 mt-2 lg:mt-3 text-xs">
           {parsedTask.dueDate && (
-            <span className="flex items-center bg-primary-50 text-primary-700 px-3 py-1 rounded-full border border-primary-200">
+            <span className="flex items-center bg-primary-50 text-primary-700 px-2 lg:px-3 py-1 rounded-full border border-primary-200">
               <CalendarIcon className="w-3 h-3 mr-1" />
               {new Date(parsedTask.dueDate).toLocaleDateString()}
             </span>
           )}
           {parsedTask.priority && (
-            <span className="flex items-center bg-red-50 text-red-600 px-3 py-1 rounded-full border border-red-200">
+            <span className="flex items-center bg-red-50 text-red-600 px-2 lg:px-3 py-1 rounded-full border border-red-200">
               <FlagIcon className="w-3 h-3 mr-1" />
               {parsedTask.priority}
             </span>
           )}
           {parsedTask.tagIds?.map(tag => (
-            <span key={tag} className="flex items-center bg-gray-50 text-gray-700 px-3 py-1 rounded-full border border-gray-200">
+            <span key={tag} className="flex items-center bg-gray-50 text-gray-700 px-2 lg:px-3 py-1 rounded-full border border-gray-200">
               <TagIcon className="w-3 h-3 mr-1" />
               {tag}
             </span>
           ))}
         </div>
       )}
-      <div className="flex justify-end items-center mt-3 pt-3 border-t border-gray-100">
+      <div className="flex justify-end items-center mt-2 lg:mt-3 pt-2 lg:pt-3 border-t border-gray-100">
         <button
           onClick={handleAIAssistant}
-          className="text-xs text-primary-600 hover:text-primary-700 mr-4 font-medium flex items-center space-x-1 transition-colors"
+          className="text-xs text-primary-600 hover:text-primary-700 mr-3 lg:mr-4 font-medium flex items-center space-x-1 transition-colors"
           disabled={isProcessing}
         >
           <span>🤖</span>
-          <span>AI 助手</span>
+          <span className={isMobile ? 'hidden' : ''}>AI 助手</span>
         </button>
         <button
           onClick={handleSubmit}
           disabled={!parsedTask || !parsedTask.title || isProcessing}
-          className="btn-modern px-6 py-2 text-sm font-medium flex items-center"
+          className="btn-modern px-4 lg:px-6 py-2 text-sm font-medium flex items-center"
         >
           {isProcessing ? (
             <>
@@ -188,7 +197,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({ onTaskSubmit, onTasksSubmit, on
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              处理中...
+              {isMobile ? '处理中' : '处理中...'}
             </>
           ) : (
             '保存'

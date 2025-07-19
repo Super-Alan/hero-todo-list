@@ -37,6 +37,7 @@ interface TaskListProps {
   searchQuery?: string
   isSearching?: boolean
   onSidebarRefresh?: () => void
+  isMobile?: boolean
 }
 
 interface TaskListHandle {

@@ -13,13 +13,15 @@ interface AIChatPanelProps {
   onClose: () => void
   initialInput?: string
   onTasksGenerated: (tasks: CreateTaskInput[]) => void
+  isMobile?: boolean
 }
 
 export default function AIChatPanel({ 
   isOpen, 
   onClose, 
   initialInput = '', 
-  onTasksGenerated 
+  onTasksGenerated,
+  isMobile = false
 }: AIChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState(initialInput)
@@ -230,96 +232,95 @@ export default function AIChatPanel({
   return (
     <div 
       ref={panelRef}
-      className="fixed inset-y-0 right-0 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col"
-      style={{ width: `${panelWidth}px` }}
+      className={`
+        ${isMobile ? 'fixed inset-0 z-50 bg-white' : 'fixed right-0 top-0 h-full bg-white border-l border-gray-200 shadow-xl'}
+        flex flex-col
+      `}
+      style={!isMobile ? { width: panelWidth } : {}}
     >
-      {/* Resize Handle */}
-      <div
-        className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize transition-all duration-150 ${
-          isResizing 
-            ? 'bg-blue-500 opacity-100' 
-            : 'bg-gray-300 opacity-0 hover:opacity-100 hover:bg-blue-400'
-        }`}
-        onMouseDown={handleResizeStart}
-        title="拖拽调整宽度"
-      >
-        {/* Visual grip indicator */}
-        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 bg-white rounded-full opacity-60" />
-      </div>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">
           <SparklesIcon className="w-5 h-5 text-blue-500" />
-          <h2 className="text-lg font-semibold text-gray-900">AI 任务助手</h2>
+          <h2 className="text-lg font-semibold text-gray-900">AI 助手</h2>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <XMarkIcon className="w-5 h-5 text-gray-500" />
-        </button>
-      </div>
-
-      {/* Model Selection */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="relative" ref={modelSelectorRef}>
-          <button
-            onClick={() => setShowModelSelector(!showModelSelector)}
-            className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white hover:bg-gray-50"
-          >
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${
-                selectedModel ? 'bg-green-500' : 'bg-gray-400'
+        <div className="flex items-center space-x-2">
+          {/* Model Selector */}
+          <div className="relative" ref={modelSelectorRef}>
+            <button
+              onClick={() => setShowModelSelector(!showModelSelector)}
+              className="flex items-center space-x-2 px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  selectedModel ? 'bg-green-500' : 'bg-gray-400'
+                }`} />
+                <span className="font-medium">
+                  {selectedModel ? selectedModel.name : '选择模型'}
+                </span>
+              </div>
+              <ChevronDownIcon className={`w-4 h-4 transition-transform ${
+                showModelSelector ? 'rotate-180' : ''
               }`} />
-              <span className="font-medium">
-                {selectedModel ? selectedModel.name : '选择模型'}
-              </span>
-            </div>
-            <ChevronDownIcon className={`w-4 h-4 transition-transform ${
-              showModelSelector ? 'rotate-180' : ''
-            }`} />
-          </button>
+            </button>
+            
+            {showModelSelector && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                {isLoading ? (
+                  <div className="px-3 py-2 text-sm text-gray-500">加载模型中...</div>
+                ) : availableModels.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-gray-500">暂无可用模型</div>
+                ) : (
+                  availableModels.map(model => (
+                    <button
+                      key={model.id}
+                      onClick={() => {
+                        selectModel(model)
+                        setShowModelSelector(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2 ${
+                        selectedModel?.id === model.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                      }`}
+                    >
+                      <div className={`w-2 h-2 rounded-full ${
+                        selectedModel?.id === model.id ? 'bg-blue-500' : 'bg-gray-300'
+                      }`} />
+                      <div>
+                        <div className="font-medium">{model.name}</div>
+                        {model.description && (
+                          <div className="text-xs text-gray-500">{model.description}</div>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           
-          {showModelSelector && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
-              {isLoading ? (
-                <div className="px-3 py-2 text-sm text-gray-500">加载模型中...</div>
-              ) : availableModels.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-gray-500">暂无可用模型</div>
-              ) : (
-                availableModels.map(model => (
-                  <button
-                    key={model.id}
-                    onClick={() => {
-                      selectModel(model)
-                      setShowModelSelector(false)
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2 ${
-                      selectedModel?.id === model.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
-                  >
-                    <div className={`w-2 h-2 rounded-full ${
-                      selectedModel?.id === model.id ? 'bg-blue-500' : 'bg-gray-300'
-                    }`} />
-                    <div>
-                      <div className="font-medium">{model.name}</div>
-                      {model.description && (
-                        <div className="text-xs text-gray-500">{model.description}</div>
-                      )}
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
         </div>
+        
+        {/* Resize handle for desktop */}
+        {!isMobile && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors"
+            onMouseDown={handleResizeStart}
+          />
+        )}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 lg:space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-8">
-            <SparklesIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <SparklesIcon className="w-8 h-8 lg:w-12 lg:h-12 text-gray-300 mx-auto mb-3 lg:mb-4" />
             <p className="text-sm">描述您的目标，我来帮您分解任务</p>
           </div>
         )}
@@ -329,7 +330,7 @@ export default function AIChatPanel({
             message.role === 'user' ? 'justify-end' : 'justify-start'
           }`}>
             <div
-              className={`max-w-[80%] px-4 py-2 rounded-lg ${
+              className={`max-w-[85%] lg:max-w-[80%] px-3 lg:px-4 py-2 rounded-lg ${
                 message.role === 'user'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 text-gray-900'
@@ -376,7 +377,7 @@ export default function AIChatPanel({
         
         {isAnalyzing && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 px-4 py-2 rounded-lg">
+            <div className="bg-gray-100 px-3 lg:px-4 py-2 rounded-lg">
               <div className="flex items-center space-x-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
                 <span className="text-sm text-gray-600">正在分析...</span>
@@ -390,7 +391,7 @@ export default function AIChatPanel({
 
       {/* Suggested Tasks */}
       {suggestedTasks.length > 0 && (
-        <div className="border-t border-gray-200 p-4 max-h-64 overflow-y-auto">
+        <div className="border-t border-gray-200 p-3 lg:p-4 max-h-48 lg:max-h-64 overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-gray-900">建议的任务</h3>
             <button
@@ -440,7 +441,7 @@ export default function AIChatPanel({
       )}
 
       {/* Input */}
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-gray-200 p-3 lg:p-4">
         <div className="flex items-center space-x-2">
           <input
             ref={inputRef}

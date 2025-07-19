@@ -216,26 +216,26 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
   if (!isOpen) return null
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content w-full max-w-2xl max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-scale-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-white/95 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center justify-between p-4 lg:p-6 border-b border-gray-200/50 bg-white/95 backdrop-blur-sm sticky top-0 z-10 rounded-t-2xl">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-modern">
-              <CogIcon className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg lg:rounded-xl flex items-center justify-center shadow-modern">
+              <CogIcon className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
             </div>
-            <h2 className="text-xl font-bold gradient-text">模型设置</h2>
+            <h2 className="text-lg lg:text-xl font-bold gradient-text">模型设置</h2>
           </div>
           <button 
             onClick={onClose} 
             className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200 group"
           >
-            <XMarkIcon className="w-6 h-6 text-gray-500 group-hover:text-gray-700 group-hover:scale-110 transition-all" />
+            <XMarkIcon className="w-5 h-5 lg:w-6 lg:h-6 text-gray-500 group-hover:text-gray-700 group-hover:scale-110 transition-all" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto flex-grow bg-white/95 backdrop-blur-sm">
+        <div className="p-4 lg:p-6 overflow-y-auto flex-grow bg-white/95 backdrop-blur-sm">
           {globalError && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl relative mb-4 animate-slide-up" role="alert">
               <div className="flex items-center space-x-2">
@@ -247,9 +247,9 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
           )}
           
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-tech animate-pulse-glow mb-4">
-                <ArrowPathIcon className="animate-spin h-8 w-8 text-white" />
+            <div className="flex flex-col items-center justify-center py-8 lg:py-12">
+              <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-tech animate-pulse-glow mb-4">
+                <ArrowPathIcon className="animate-spin h-6 w-6 lg:h-8 lg:w-8 text-white" />
               </div>
               <span className="text-gray-600 font-medium">加载中...</span>
             </div>
@@ -260,14 +260,14 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                 <div className="space-y-4 animate-slide-up">
                   <button
                     onClick={handleAddNew}
-                    className="w-full p-6 border-2 border-dashed border-primary-300 rounded-xl hover:border-primary-500 hover:bg-primary-50/50 transition-all duration-300 group"
+                    className="w-full p-4 lg:p-6 border-2 border-dashed border-primary-300 rounded-xl hover:border-primary-500 hover:bg-primary-50/50 transition-all duration-300 group"
                   >
                     <div className="flex flex-col items-center space-y-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-modern group-hover:shadow-tech transition-all duration-300">
-                        <PlusIcon className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+                      <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-modern group-hover:shadow-tech transition-all duration-300">
+                        <PlusIcon className="w-5 h-5 lg:w-6 lg:h-6 text-white group-hover:scale-110 transition-transform" />
                       </div>
                       <div className="text-center">
-                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary-700 transition-colors">
+                        <h3 className="text-base lg:text-lg font-semibold text-gray-900 group-hover:text-primary-700 transition-colors">
                           添加新模型
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
@@ -285,14 +285,14 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                         description: 'OpenAI 的 GPT-4 模型，强大的语言理解和生成能力',
                         endpoint: 'https://api.openai.com/v1/chat/completions'
                       })}
-                      className="p-4 border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/30 transition-all duration-200 text-left group"
+                      className="p-3 lg:p-4 border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/30 transition-all duration-200 text-left group"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                        <div className="w-7 h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm font-bold">O</span>
                         </div>
                         <div>
-                          <h4 className="font-medium text-gray-900 group-hover:text-primary-700">GPT-4</h4>
+                          <h4 className="font-medium text-gray-900 group-hover:text-primary-700 text-sm lg:text-base">GPT-4</h4>
                           <p className="text-xs text-gray-500">OpenAI</p>
                         </div>
                       </div>
@@ -304,14 +304,14 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                         description: 'Anthropic 的 Claude 3 模型，优秀的推理和写作能力',
                         endpoint: 'https://api.anthropic.com/v1/messages'
                       })}
-                      className="p-4 border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/30 transition-all duration-200 text-left group"
+                      className="p-3 lg:p-4 border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/30 transition-all duration-200 text-left group"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                        <div className="w-7 h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm font-bold">C</span>
                         </div>
                         <div>
-                          <h4 className="font-medium text-gray-900 group-hover:text-primary-700">Claude 3</h4>
+                          <h4 className="font-medium text-gray-900 group-hover:text-primary-700 text-sm lg:text-base">Claude 3</h4>
                           <p className="text-xs text-gray-500">Anthropic</p>
                         </div>
                       </div>
@@ -323,14 +323,14 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                         description: 'Google 的 Gemini Pro 模型，多模态AI能力',
                         endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
                       })}
-                      className="p-4 border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/30 transition-all duration-200 text-left group"
+                      className="p-3 lg:p-4 border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/30 transition-all duration-200 text-left group"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                        <div className="w-7 h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm font-bold">G</span>
                         </div>
                         <div>
-                          <h4 className="font-medium text-gray-900 group-hover:text-primary-700">Gemini Pro</h4>
+                          <h4 className="font-medium text-gray-900 group-hover:text-primary-700 text-sm lg:text-base">Gemini Pro</h4>
                           <p className="text-xs text-gray-500">Google</p>
                         </div>
                       </div>
@@ -341,9 +341,9 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
 
               {/* 新增模型表单 */}
               {isAddingNew && (
-                <div className="card-modern rounded-xl p-6 border-2 border-primary-200 bg-gradient-to-br from-primary-50/50 to-blue-50/50 animate-slide-up">
+                <div className="card-modern rounded-xl p-4 lg:p-6 border-2 border-primary-200 bg-gradient-to-br from-primary-50/50 to-blue-50/50 animate-slide-up">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">添加新模型</h3>
+                    <h3 className="text-base lg:text-lg font-semibold text-gray-900">添加新模型</h3>
                     <button
                       onClick={handleCancelAdd}
                       className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200"
@@ -362,7 +362,7 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                         value={newModelForm.name || ''}
                         onChange={(e) => setNewModelForm({ ...newModelForm, name: e.target.value })}
                         placeholder="例如：OpenAI GPT-4"
-                        className="input-modern w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                        className="input-modern w-full px-3 lg:px-4 py-2.5 lg:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                       />
                     </div>
                     
@@ -375,7 +375,7 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                         value={newModelForm.description || ''}
                         onChange={(e) => setNewModelForm({ ...newModelForm, description: e.target.value })}
                         placeholder="模型描述（可选）"
-                        className="input-modern w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                        className="input-modern w-full px-3 lg:px-4 py-2.5 lg:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                       />
                     </div>
                     
@@ -388,15 +388,15 @@ export default function ModelSettings({ isOpen, onClose }: ModelSettingsProps) {
                         value={newModelForm.endpoint || ''}
                         onChange={(e) => setNewModelForm({ ...newModelForm, endpoint: e.target.value })}
                         placeholder="https://api.openai.com/v1/chat/completions"
-                        className="input-modern w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                        className="input-modern w-full px-3 lg:px-4 py-2.5 lg:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                       />
                     </div>
                     
-                                          <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          API密钥 <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        API密钥 <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
                           <input
                             type={showApiKey['new'] ? 'text' : 'password'}
                             value={newModelForm.apiKey || ''}

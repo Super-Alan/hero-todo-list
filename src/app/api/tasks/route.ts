@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') // 新增搜索参数
     const priority = searchParams.get('priority')
     const status = searchParams.get('status')
-
+    
     // 构建查询条件
     const where: any = { userId: user.id }
 
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
         },
         {
           taskTags: {
-            some: {
+        some: {
               tag: {
                 name: {
                   contains: searchTerm,
@@ -123,8 +123,8 @@ export async function GET(request: NextRequest) {
                 }
               }
             }
-          }
         }
+      }
       ]
     }
 

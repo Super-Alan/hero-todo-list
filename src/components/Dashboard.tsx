@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { CreateTaskInput } from '@/types';
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTaskData } from '@/contexts/TaskDataContext'
 import Header from './Header'
 import Sidebar from './Sidebar'
@@ -12,6 +12,7 @@ import TaskAddBar from './TaskAddBar'
 import AIChatPanel from './AIChatPanel';
 import ModelSettings from './ModelSettings'
 import { useKeyboardShortcuts, createShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { Menu, X } from 'lucide-react'
 
 export default function Dashboard() {
   const { data: session } = useSession()
@@ -28,17 +29,38 @@ export default function Dashboard() {
   const sidebarRef = useRef<{ refreshTags: () => void; refreshTaskStats: () => void } | null>(null)
   const [isAIChatPanelOpen, setIsAIChatPanelOpen] = useState(false);
   const [showModelSettings, setShowModelSettings] = useState(false);
+  
+  // 移动端状态管理
+  const [isMobile, setIsMobile] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
+
+  // 检测移动端
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // 移动端时自动关闭侧边栏
+  useEffect(() => {
+    if (!isMobile) {
+      setIsSidebarOpen(false)
+    }
+  }, [isMobile])
 
   const handleTaskCreated = async () => {
-    // 刷新所有数据
-    await refreshAll();
-    
-    // 刷新任务列表
+    await refreshAll()
     if (taskListRef.current) {
       taskListRef.current.refreshTasks()
     }
-    // 刷新侧栏标签列表（新创建的标签会自动显示在侧栏）
     if (sidebarRef.current) {
+      sidebarRef.current.refreshTaskStats()
       sidebarRef.current.refreshTags()
     }
   }
@@ -92,10 +114,18 @@ export default function Dashboard() {
     if (view !== 'tag') {
       setSelectedTag(null)
     }
+    // 移动端选择视图后关闭侧边栏
+    if (isMobile) {
+      setIsSidebarOpen(false)
+    }
   }
 
   const handleTagSelect = (tagId: string | null) => {
     setSelectedTag(tagId)
+    // 移动端选择标签后关闭侧边栏
+    if (isMobile) {
+      setIsSidebarOpen(false)
+    }
   }
 
   const handleSearch = (filters: any) => {
@@ -126,11 +156,15 @@ export default function Dashboard() {
   }
 
   const handleToggleAIChatPanel = () => {
-    setIsAIChatPanelOpen(prev => !prev);
+    if (isMobile) {
+      setIsAIPanelOpen(!isAIPanelOpen)
+    } else {
+      setIsAIChatPanelOpen(prev => !prev);
+    }
   };
 
-  // 定义快捷键
-  const shortcuts = [
+  // 定义快捷键（仅在桌面端生效）
+  const shortcuts = isMobile ? [] : [
     // Ctrl+N 或 Cmd+N：快速添加任务
     {
       key: 'n',
@@ -173,29 +207,49 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 overflow-hidden">
+      {/* 移动端遮罩层 */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* 侧边栏 */}
-      <Sidebar
-        ref={sidebarRef}
-        selectedView={selectedView}
-        selectedTag={selectedTag}
-        onViewSelect={handleViewChange}
-        onTagSelect={handleTagSelect}
-      />
+      <div className={`
+        ${isMobile ? 'fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out h-screen' : 'relative h-full'}
+        ${isMobile && !isSidebarOpen ? '-translate-x-full' : ''}
+        ${!isMobile ? 'w-64' : 'w-80'}
+      `}>
+        <Sidebar
+          ref={sidebarRef}
+          selectedView={selectedView}
+          selectedTag={selectedTag}
+          onViewSelect={handleViewChange}
+          onTagSelect={handleTagSelect}
+        />
+      </div>
 
       {/* 主内容区域 */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${isAIChatPanelOpen ? 'mr-96' : ''}`}>
+      <div className={`
+        flex-1 flex flex-col transition-all duration-300 h-full
+        ${!isMobile && isAIChatPanelOpen ? 'mr-96' : ''}
+        ${isMobile ? 'w-full' : ''}
+      `}>
         {/* 头部 */}
         <Header 
           onOpenModelSettings={() => setShowModelSettings(true)}
           onSearch={handleSearchQuery}
           onClearSearch={handleClearSearchQuery}
           searchQuery={searchQuery}
+          isMobile={isMobile}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          isSidebarOpen={isSidebarOpen}
         />
 
         {/* 主要内容 */}
-        <main className="flex-1 overflow-auto p-6 animate-fade-in">
-  
+        <main className="flex-1 overflow-auto p-4 lg:p-6 animate-fade-in">
           {/* 智能快速添加 */}
           <SmartQuickAdd
             isOpen={showSmartQuickAdd}
@@ -210,6 +264,7 @@ export default function Dashboard() {
             onTasksSubmit={handleBatchTasksSubmit}
             onOpenAdvanced={handleOpenAdvancedAdd}
             onToggleAIAssistant={handleToggleAIChatPanel}
+            isMobile={isMobile}
           />
 
           {/* 任务列表 */}
@@ -221,24 +276,40 @@ export default function Dashboard() {
             searchQuery={searchQuery}
             isSearching={isSearching}
             onSidebarRefresh={handleRefreshSidebar}
+            isMobile={isMobile}
           />
         </main>
       </div>
 
-      {/* AI Chat Panel */}
-      <AIChatPanel
-        isOpen={isAIChatPanelOpen}
-        onClose={() => setIsAIChatPanelOpen(false)}
-        onTasksGenerated={handleBatchTasksSubmit}
-      />
+      {/* AI Chat Panel - 桌面端 */}
+      {!isMobile && (
+        <AIChatPanel
+          isOpen={isAIChatPanelOpen}
+          onClose={() => setIsAIChatPanelOpen(false)}
+          onTasksGenerated={handleBatchTasksSubmit}
+        />
+      )}
+
+      {/* AI Chat Panel - 移动端 */}
+      {isMobile && (
+        <div className={`
+          fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out
+          ${isAIPanelOpen ? 'translate-x-0' : 'translate-x-full'}
+        `}>
+          <AIChatPanel
+            isOpen={isAIPanelOpen}
+            onClose={() => setIsAIPanelOpen(false)}
+            onTasksGenerated={handleBatchTasksSubmit}
+            isMobile={true}
+          />
+        </div>
+      )}
 
       {/* 模型设置弹窗 */}
       <ModelSettings 
         isOpen={showModelSettings}
         onClose={() => setShowModelSettings(false)}
       />
-
-    
     </div>
   )
 } 
