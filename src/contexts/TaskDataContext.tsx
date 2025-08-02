@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { TaskWithDetails, TagWithDetails } from '@/types'
 import { api } from '@/lib/api'
 
@@ -130,6 +131,7 @@ interface TaskDataContextType {
 const TaskDataContext = createContext<TaskDataContextType | undefined>(undefined)
 
 export function TaskDataProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession()
   const [state, dispatch] = useReducer(taskDataReducer, initialState)
 
   // 缓存管理
@@ -319,9 +321,14 @@ export function TaskDataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [setCachedData])
 
-  // 初始化数据 - 只在组件挂载时执行一次
+  // 初始化数据 - 只在用户已认证时执行
   useEffect(() => {
     const initializeData = async () => {
+      // 只有在用户已登录时才初始化数据
+      if (status !== 'authenticated' || !session) {
+        return
+      }
+
       try {
         dispatch({ type: 'SET_LOADING', payload: true })
         
@@ -344,8 +351,10 @@ export function TaskDataProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
-    initializeData()
-  }, [setCachedData]) // 只依赖 setCachedData
+    if (status === 'authenticated') {
+      initializeData()
+    }
+  }, [setCachedData, session, status]) // 依赖 session 和 status
 
   const value: TaskDataContextType = {
     state,

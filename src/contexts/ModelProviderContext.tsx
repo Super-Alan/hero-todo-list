@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { ModelProviderContextType, AvailableModel, AITaskAnalysis, StreamChunk, StreamingChatOptions } from '@/types/modelProvider'
 
 const ModelProviderContext = createContext<ModelProviderContextType | undefined>(undefined)
@@ -10,12 +11,18 @@ interface ModelProviderProviderProps {
 }
 
 export function ModelProviderProvider({ children }: ModelProviderProviderProps) {
+  const { data: session, status } = useSession()
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([])
   const [selectedModel, setSelectedModel] = useState<AvailableModel | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refreshModels = useCallback(async () => {
+    // 只有在用户已登录时才获取模型
+    if (status !== 'authenticated' || !session) {
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     
@@ -40,7 +47,7 @@ export function ModelProviderProvider({ children }: ModelProviderProviderProps) 
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [session, status])
 
   const selectModel = useCallback((model: AvailableModel) => {
     setSelectedModel(model)
@@ -163,7 +170,7 @@ export function ModelProviderProvider({ children }: ModelProviderProviderProps) 
     }
   }, [selectedModel])
 
-  // Load saved model selection on mount
+  // Load saved model selection on mount and refresh models when authenticated
   useEffect(() => {
     const savedModel = localStorage.getItem('selectedModel')
     if (savedModel) {
@@ -173,8 +180,12 @@ export function ModelProviderProvider({ children }: ModelProviderProviderProps) 
         // Ignore invalid saved data
       }
     }
-    refreshModels()
-  }, [refreshModels])
+    
+    // 只有在用户已认证时才刷新模型列表
+    if (status === 'authenticated') {
+      refreshModels()
+    }
+  }, [refreshModels, status])
 
   const value: ModelProviderContextType = {
     availableModels,
