@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { TaskWithDetails } from '@/types'
-import { Priority } from '@/generated/prisma'
+import { Priority } from '@prisma/client'
 
 interface TaskDetailProps {
   taskId: string

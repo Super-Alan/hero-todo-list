@@ -1,4 +1,4 @@
-import { Task, Tag, User, Priority, TaskStatus } from '../generated/prisma'
+import { Task, Tag, User, Priority, TaskStatus } from '@prisma/client'
 
 // 基础类型扩展
 export interface TaskWithDetails extends Task {
