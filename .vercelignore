@@ -1,0 +1,15 @@
+# 忽略不需要的文件
+node_modules
+.next
+.git
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 保留必要的文件
+!package.json
+!next.config.js
+!prisma/schema.prisma
+!src/**/*
+!public/**/* 
