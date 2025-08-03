@@ -6,13 +6,16 @@ import { CreateTaskInput } from '@/types';
 import { Priority } from '@/types';
 import { CalendarIcon, TagIcon, FlagIcon } from '@heroicons/react/24/outline';
 import { tagService } from '@/lib/tagService';
-import AIChatPanel from './AIChatPanel';
+import { TaskQualityScorer } from '@/lib/task-quality-scorer';
+import SmartTaskAdvisor from './SmartTaskAdvisor';
+import { useModelProvider } from '@/contexts/ModelProviderContext';
 
 interface TaskAddBarProps {
   onTaskSubmit: (task: CreateTaskInput) => void;
   onTasksSubmit?: (tasks: CreateTaskInput[]) => void;
   onOpenAdvanced: (initialValue: string) => void;
   onToggleAIAssistant?: () => void;
+  onOpenAIChat?: (initialInput: string) => void;
   isMobile?: boolean;
 }
 
@@ -21,14 +24,33 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
   onTasksSubmit, 
   onOpenAdvanced, 
   onToggleAIAssistant,
+  onOpenAIChat,
   isMobile = false
 }) => {
   const [isActive, setIsActive] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [parsedTask, setParsedTask] = useState<CreateTaskInput | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [qualityScore, setQualityScore] = useState<number | null>(null);
+  const [qualityDetails, setQualityDetails] = useState<any>(null);
+  const [showQualityHint, setShowQualityHint] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const { selectedModel } = useModelProvider();
+
+  // 实时评估任务质量
+  useEffect(() => {
+    if (inputValue.trim().length > 3) {
+      const scoreResult = TaskQualityScorer.scoreTask(inputValue);
+      setQualityScore(scoreResult.totalScore);
+      setQualityDetails(scoreResult);
+      setShowQualityHint(scoreResult.totalScore < 60);
+    } else {
+      setQualityScore(null);
+      setQualityDetails(null);
+      setShowQualityHint(false);
+    }
+  }, [inputValue]);
 
   useEffect(() => {
     if (isActive && inputRef.current) {
@@ -47,6 +69,15 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
 
   const handleSubmit = async () => {
     if (!parsedTask || !parsedTask.title || isProcessing) {
+      return;
+    }
+
+    // 如果质量分数低于70分，弹出AI助手
+    if (qualityScore !== null && qualityScore < 70 && onOpenAIChat) {
+      onOpenAIChat(inputValue);
+      setInputValue('');
+      setParsedTask(null);
+      setIsActive(false);
       return;
     }
 
@@ -155,6 +186,21 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
         className="w-full focus:outline-none text-sm lg:text-base bg-transparent text-gray-800 placeholder:text-gray-400"
         disabled={isProcessing}
       />
+      {/* 质量评分提示 */}
+      {showQualityHint && qualityScore !== null && qualityDetails && (
+        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center text-sm text-amber-700 mb-1">
+            <span className="mr-2">💡</span>
+            <span>任务质量评分: {qualityScore}/100 - 按回车获取AI优化建议</span>
+          </div>
+          {qualityDetails.suggestions && qualityDetails.suggestions.length > 0 && (
+            <div className="text-xs text-amber-600 ml-6">
+              <span>建议改进: </span>
+              {qualityDetails.suggestions.slice(0, 2).join('；')}
+            </div>
+          )}
+        </div>
+      )}
       {parsedTask && (
         <div className="flex items-center flex-wrap gap-1 lg:gap-2 mt-2 lg:mt-3 text-xs">
           {parsedTask.dueDate && (

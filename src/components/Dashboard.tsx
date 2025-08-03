@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [quickAddInitialValue, setQuickAddInitialValue] = useState('')
   const sidebarRef = useRef<{ refreshTags: () => void; refreshTaskStats: () => void } | null>(null)
   const [isAIChatPanelOpen, setIsAIChatPanelOpen] = useState(false);
+  const [aiChatInitialInput, setAiChatInitialInput] = useState('');
   const [showModelSettings, setShowModelSettings] = useState(false);
   
   // 移动端状态管理
@@ -163,6 +164,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleOpenAIChat = (initialInput: string) => {
+    setAiChatInitialInput(initialInput);
+    if (isMobile) {
+      setIsAIPanelOpen(true)
+    } else {
+      setIsAIChatPanelOpen(true);
+    }
+  };
+
   // 定义快捷键（仅在桌面端生效）
   const shortcuts = isMobile ? [] : [
     // Ctrl+N 或 Cmd+N：快速添加任务
@@ -264,6 +274,7 @@ export default function Dashboard() {
             onTasksSubmit={handleBatchTasksSubmit}
             onOpenAdvanced={handleOpenAdvancedAdd}
             onToggleAIAssistant={handleToggleAIChatPanel}
+            onOpenAIChat={handleOpenAIChat}
             isMobile={isMobile}
           />
 
@@ -285,8 +296,12 @@ export default function Dashboard() {
       {!isMobile && (
         <AIChatPanel
           isOpen={isAIChatPanelOpen}
-          onClose={() => setIsAIChatPanelOpen(false)}
+          onClose={() => {
+            setIsAIChatPanelOpen(false)
+            setAiChatInitialInput('') // 关闭时清空初始输入
+          }}
           onTasksGenerated={handleBatchTasksSubmit}
+          initialInput={aiChatInitialInput}
         />
       )}
 
@@ -298,8 +313,12 @@ export default function Dashboard() {
         `}>
           <AIChatPanel
             isOpen={isAIPanelOpen}
-            onClose={() => setIsAIPanelOpen(false)}
+            onClose={() => {
+              setIsAIPanelOpen(false)
+              setAiChatInitialInput('') // 关闭时清空初始输入
+            }}
             onTasksGenerated={handleBatchTasksSubmit}
+            initialInput={aiChatInitialInput}
             isMobile={true}
           />
         </div>
@@ -312,4 +331,4 @@ export default function Dashboard() {
       />
     </div>
   )
-} 
+}

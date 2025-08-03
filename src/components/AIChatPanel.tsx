@@ -55,8 +55,10 @@ export default function AIChatPanel({
   }, [messages])
 
   useEffect(() => {
-    if (initialInput && isOpen) {
+    if (initialInput && isOpen && initialInput.trim()) {
       setInputValue(initialInput)
+      // 自动发送任务分析请求
+      handleAutoAnalysis(initialInput)
     }
   }, [initialInput, isOpen])
 
@@ -113,6 +115,93 @@ export default function AIChatPanel({
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
+  }
+
+  const handleAutoAnalysis = async (taskInput: string) => {
+    if (!selectedModel) return
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: taskInput.trim(),
+      timestamp: new Date()
+    }
+
+    setMessages([userMessage])
+    setIsAnalyzing(true)
+
+    // Create assistant message for streaming
+    const assistantMessageId = (Date.now() + 1).toString()
+    const assistantMessage: ChatMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isStreaming: true,
+      thinking: ''
+    }
+
+    setMessages(prev => [...prev, assistantMessage])
+
+    try {
+      const streamGenerator = streamChat(taskInput, {
+        systemPrompt: `你是一个专业的任务管理助手。用户刚刚输入了一个任务，但是任务的质量评分较低（低于70分）。请根据SMART原则和"学霸"任务拆分原则，帮助用户优化这个任务。
+
+**SMART 原则:**
+- **S (Specific - 具体性)**: 任务是否足够具体？
+- **M (Measurable - 可衡量性)**: 任务的完成度是否可以衡量？
+- **A (Achievable - 可实现性)**: 这个任务在当前资源和时间下是否可以完成？
+- **R (Relevant - 相关性)**: 这个任务是否与长期目标相关？
+- **T (Time-bound - 时限性)**: 任务是否有明确的截止日期？
+
+**"学霸"原则:**
+- **任务拆解**: 如果任务比较复杂，是否可以分解成几个更小、更容易执行的步骤？
+- **优先级**: 这个任务的重要程度如何？
+
+请分析用户的任务，指出可以改进的地方，并提供1-2个优化后的任务版本。语气要友好、鼓励，像一个亲切的学长学姐。`,
+        temperature: 0.7,
+        maxTokens: 2000,
+        enableThinking: true
+      })
+
+      for await (const chunk of streamGenerator) {
+        if (chunk.type === 'thinking') {
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, thinking: (msg.thinking || '') + chunk.content }
+              : msg
+          ))
+        } else if (chunk.type === 'content') {
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: msg.content + chunk.content }
+              : msg
+          ))
+        } else if (chunk.type === 'done') {
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, isStreaming: false }
+              : msg
+          ))
+          break
+        } else if (chunk.type === 'error') {
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: `错误: ${chunk.content}`, isStreaming: false }
+              : msg
+          ))
+          break
+        }
+      }
+    } catch (error) {
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { ...msg, content: '抱歉，处理您的请求时出现错误。请稍后重试。', isStreaming: false }
+          : msg
+      ))
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const handleSendMessage = async () => {
