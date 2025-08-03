@@ -15,8 +15,8 @@ export const authOptions: NextAuthOptions = {
       },
     }),
     GitHubProvider({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!,
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       httpOptions: {
         timeout: 10000, // 10 秒超时
       },
