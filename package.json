@@ -24,6 +24,7 @@
     "@vercel/speed-insights": "^1.2.0",
     "core-js": "^3.44.0",
     "dotenv": "^16.4.7",
+    "framer-motion": "^12.23.12",
     "lucide-react": "^0.468.0",
     "next": "15.3.5",
     "next-auth": "^4.24.11",
