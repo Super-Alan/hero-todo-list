@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
-import { XMarkIcon, PaperAirplaneIcon, SparklesIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { XMarkIcon, PaperAirplaneIcon, SparklesIcon, ChevronDownIcon, ClipboardIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { useModelProvider } from '@/contexts/ModelProviderContext'
 import { ChatMessage, SuggestedTask, StreamChunk } from '@/types/modelProvider'
 import { CreateTaskInput } from '@/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useMobileGestures, mobileUtils } from '@/lib/mobile-gestures'
 
 interface AIChatPanelProps {
   isOpen: boolean
@@ -37,10 +38,15 @@ export default function AIChatPanel({
     return 480
   })
   const [isResizing, setIsResizing] = useState(false)
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
+  const [showCopyButtons, setShowCopyButtons] = useState(!mobileUtils.isMobile())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const modelSelectorRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   
   const { selectedModel, availableModels, selectModel, streamChat, isLoading } = useModelProvider()
 
@@ -61,6 +67,57 @@ export default function AIChatPanel({
       handleAutoAnalysis(initialInput)
     }
   }, [initialInput, isOpen])
+
+  // 键盘适配 - 监听视口变化
+  useEffect(() => {
+    if (!isMobile) return
+
+    const handleViewportChange = () => {
+      const viewportHeight = window.visualViewport?.height || window.innerHeight
+      const windowHeight = window.innerHeight
+      const keyboardHeight = Math.max(0, windowHeight - viewportHeight)
+      
+      setKeyboardHeight(keyboardHeight)
+      setIsKeyboardVisible(keyboardHeight > 100) // 键盘高度超过100px认为是显示状态
+    }
+
+    // 使用 visualViewport API（现代浏览器）
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange)
+      return () => {
+        window.visualViewport?.removeEventListener('resize', handleViewportChange)
+      }
+    } else {
+      // 降级方案：监听 resize 事件
+      window.addEventListener('resize', handleViewportChange)
+      return () => {
+        window.removeEventListener('resize', handleViewportChange)
+      }
+    }
+  }, [isMobile])
+
+  // 移动端复制按钮显示逻辑
+  useEffect(() => {
+    if (!isMobile) return
+
+    let timer: NodeJS.Timeout
+    const handleTouch = () => {
+      setShowCopyButtons(true)
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        setShowCopyButtons(false)
+      }, 3000) // 3秒后隐藏复制按钮
+    }
+
+    const container = messagesContainerRef.current
+    if (container) {
+      container.addEventListener('touchstart', handleTouch)
+      return () => {
+        container.removeEventListener('touchstart', handleTouch)
+        clearTimeout(timer)
+      }
+    }
+  }, [isMobile])
 
   // Close model selector when clicking outside
   useEffect(() => {
@@ -116,6 +173,77 @@ export default function AIChatPanel({
     e.preventDefault()
     setIsResizing(true)
   }
+
+  const handleCopyMessage = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedMessageId(messageId)
+      setTimeout(() => setCopiedMessageId(null), 2000)
+    } catch (error) {
+      console.error('Failed to copy text:', error)
+    }
+  }
+
+  const handleCopySelection = async (event?: React.MouseEvent | React.TouchEvent) => {
+    try {
+      const selection = window.getSelection()
+      if (selection && selection.toString().trim()) {
+        await navigator.clipboard.writeText(selection.toString())
+        
+        if (mobileUtils.isMobile()) {
+          // 移动端显示简单的提示
+          const feedback = document.getElementById('copy-feedback')
+          if (feedback && event) {
+            const clientX = 'touches' in event.nativeEvent ? 
+              event.nativeEvent.touches[0]?.clientX || event.nativeEvent.changedTouches[0]?.clientX :
+              (event as React.MouseEvent).clientX
+            const clientY = 'touches' in event.nativeEvent ? 
+              event.nativeEvent.touches[0]?.clientY || event.nativeEvent.changedTouches[0]?.clientY :
+              (event as React.MouseEvent).clientY
+            
+            feedback.style.left = `${clientX}px`
+            feedback.style.top = `${clientY - 40}px`
+            feedback.style.opacity = '1'
+            setTimeout(() => {
+              feedback.style.opacity = '0'
+            }, 1500)
+          }
+        } else {
+          // 桌面端保持原有的内联提示
+          const range = selection.getRangeAt(0)
+          const span = document.createElement('span')
+          span.style.backgroundColor = '#3b82f6'
+          span.style.color = 'white'
+          span.style.padding = '2px 4px'
+          span.style.borderRadius = '4px'
+          span.style.fontSize = '12px'
+          span.textContent = '已复制'
+          range.insertNode(span)
+          setTimeout(() => {
+            span.remove()
+            selection.removeAllRanges()
+          }, 1000)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to copy selection:', error)
+    }
+  }
+
+  // 滑动手势回调
+  const handleSwipeRight = useCallback(() => {
+    if (isMobile) {
+      onClose()
+    }
+  }, [isMobile, onClose])
+
+  // 使用移动端手势
+  useMobileGestures(panelRef, {
+    onSwipeRight: handleSwipeRight,
+  }, {
+    minSwipeDistance: 100, // 最小滑动距离
+    maxSwipeTime: 500, // 最大滑动时间
+  })
 
   const handleAutoAnalysis = async (taskInput: string) => {
     if (!selectedModel) return
@@ -323,10 +451,22 @@ export default function AIChatPanel({
       ref={panelRef}
       className={`
         ${isMobile ? 'fixed inset-0 z-50 bg-white' : 'fixed right-0 top-0 h-full bg-white border-l border-gray-200 shadow-xl'}
-        flex flex-col
+        flex flex-col relative transition-transform duration-300 ease-out
       `}
-      style={!isMobile ? { width: panelWidth } : {}}
+      style={{
+        ...(!isMobile ? { width: panelWidth } : {}),
+        ...(isMobile && isKeyboardVisible ? { height: `calc(100vh - ${keyboardHeight}px)` } : {})
+      }}
+
     >
+      {/* Copy selection feedback */}
+      <div 
+        id="copy-feedback" 
+        className="fixed z-50 px-2 py-1 bg-green-500 text-white text-xs rounded shadow-lg pointer-events-none opacity-0 transition-opacity duration-200"
+        style={{ transform: 'translate(-50%, -100%)', marginTop: '-8px' }}
+      >
+        已复制
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">
@@ -406,7 +546,14 @@ export default function AIChatPanel({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 lg:space-y-4">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 lg:space-y-4 overscroll-behavior-y-contain"
+        style={{
+          WebkitOverflowScrolling: 'touch', // iOS 惯性滚动
+          scrollBehavior: 'smooth'
+        }}
+      >
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-8">
             <SparklesIcon className="w-8 h-8 lg:w-12 lg:h-12 text-gray-300 mx-auto mb-3 lg:mb-4" />
@@ -418,48 +565,82 @@ export default function AIChatPanel({
           <div key={message.id} className={`flex ${
             message.role === 'user' ? 'justify-end' : 'justify-start'
           }`}>
-            <div
-              className={`max-w-[85%] lg:max-w-[80%] px-3 lg:px-4 py-2 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-900'
-              }`}
-            >
-              {/* Thinking content for assistant messages */}
-              {message.role === 'assistant' && message.thinking && (
-                <div className="mb-2 p-2 bg-gray-50 rounded text-xs text-gray-600 border-l-2 border-gray-300">
-                  <div className="font-medium mb-1 flex items-center">
-                    <SparklesIcon className="w-3 h-3 mr-1" />
-                    思考过程
+            <div className="relative group max-w-[85%] lg:max-w-[80%]">
+              <div
+                className={`px-3 lg:px-4 py-2 rounded-lg select-text ${
+                  message.role === 'user'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-900'
+                } ${isMobile ? 'active:bg-opacity-80 transition-all duration-150' : ''}`}
+                onMouseUp={handleCopySelection}
+                onTouchEnd={mobileUtils.isMobile() ? handleCopySelection : undefined}
+                style={{
+                  minHeight: isMobile ? '44px' : 'auto', // 确保移动端触摸目标足够大
+                  userSelect: 'text',
+                  WebkitUserSelect: 'text'
+                }}
+              >
+                {/* Thinking content for assistant messages */}
+                {message.role === 'assistant' && message.thinking && (
+                  <div className="mb-2 p-2 bg-gray-50 rounded text-xs text-gray-600 border-l-2 border-gray-300">
+                    <div className="font-medium mb-1 flex items-center">
+                      <SparklesIcon className="w-3 h-3 mr-1" />
+                      思考过程
+                    </div>
+                    <div className="prose prose-xs max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.thinking}
+                      </ReactMarkdown>
+                    </div>
                   </div>
-                  <div className="prose prose-xs max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {message.thinking}
-                    </ReactMarkdown>
-                  </div>
+                )}
+                
+                {/* Main content */}
+                <div className="text-sm">
+                  {message.role === 'assistant' ? (
+                    <div className="prose prose-sm max-w-none text-gray-900">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap">{message.content}</div>
+                  )}
+                  {message.isStreaming && (
+                    <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />
+                  )}
                 </div>
-              )}
-              
-              {/* Main content */}
-              <div className="text-sm">
-                {message.role === 'assistant' ? (
-                  <div className="prose prose-sm max-w-none text-gray-900">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <div className="whitespace-pre-wrap">{message.content}</div>
-                )}
-                {message.isStreaming && (
-                  <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />
-                )}
+                
+                <p className="text-xs opacity-70 mt-1">
+                  {message.timestamp.toLocaleTimeString()}
+                  {message.isStreaming && ' • 正在输入...'}
+                </p>
               </div>
               
-              <p className="text-xs opacity-70 mt-1">
-                {message.timestamp.toLocaleTimeString()}
-                {message.isStreaming && ' • 正在输入...'}
-              </p>
+              {/* Copy button */}
+              {message.role === 'assistant' && message.content && !message.isStreaming && (
+                <button
+                  onClick={() => handleCopyMessage(message.id, message.content)}
+                  className={`
+                    absolute top-2 right-2 transition-opacity p-1 rounded bg-white shadow-sm border border-gray-200 hover:bg-gray-50
+                    ${isMobile 
+                      ? (showCopyButtons ? 'opacity-100' : 'opacity-0') 
+                      : 'opacity-0 group-hover:opacity-100'
+                    }
+                    ${isMobile ? 'min-w-[44px] min-h-[44px] flex items-center justify-center' : ''}
+                  `}
+                  title="复制全部内容"
+                  style={{
+                    touchAction: 'manipulation' // 防止双击缩放
+                  }}
+                >
+                  {copiedMessageId === message.id ? (
+                    <CheckIcon className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'} text-green-500`} />
+                  ) : (
+                    <ClipboardIcon className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'} text-gray-500`} />
+                  )}
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -530,7 +711,13 @@ export default function AIChatPanel({
       )}
 
       {/* Input */}
-      <div className="border-t border-gray-200 p-3 lg:p-4">
+      <div 
+        className="border-t border-gray-200 p-3 lg:p-4 bg-white"
+        style={{
+          paddingBottom: isMobile && isKeyboardVisible ? '8px' : undefined,
+          transition: 'padding 0.3s ease'
+        }}
+      >
         <div className="flex items-center space-x-2">
           <input
             ref={inputRef}
@@ -539,19 +726,47 @@ export default function AIChatPanel({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="描述您的目标或任务..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`
+              flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm 
+              focus:outline-none focus:ring-2 focus:ring-blue-500
+              ${isMobile ? 'min-h-[44px]' : ''}
+            `}
+            style={{
+              fontSize: isMobile ? '16px' : undefined, // 防止iOS缩放
+              touchAction: 'manipulation'
+            }}
             disabled={isAnalyzing}
           />
           <button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isAnalyzing || !selectedModel}
-            className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 transition-colors"
+            className={`
+              p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 
+              disabled:bg-gray-300 transition-colors
+              ${isMobile ? 'min-w-[44px] min-h-[44px] active:bg-blue-700' : ''}
+            `}
+            style={{
+              touchAction: 'manipulation'
+            }}
             title={!selectedModel ? '请先选择一个模型' : ''}
           >
             <PaperAirplaneIcon className="w-4 h-4" />
           </button>
         </div>
       </div>
+      
+      {/* 全局复制反馈 - 仅移动端 */}
+      {isMobile && (
+        <div
+          id="copy-feedback"
+          className="fixed pointer-events-none z-[60] bg-black text-white px-3 py-1 rounded-md text-sm opacity-0 transition-opacity duration-300"
+          style={{
+            transform: 'translate(-50%, -100%)'
+          }}
+        >
+          已复制
+        </div>
+      )}
     </div>
   )
 }

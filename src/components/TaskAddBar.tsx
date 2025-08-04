@@ -72,8 +72,8 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
       return;
     }
 
-    // 如果质量分数低于70分，弹出AI助手
-    if (qualityScore !== null && qualityScore < 70 && onOpenAIChat) {
+    // 如果质量分数低于60分，弹出AI助手
+    if (qualityScore !== null && qualityScore < 60 && onOpenAIChat) {
       onOpenAIChat(inputValue);
       setInputValue('');
       setParsedTask(null);
