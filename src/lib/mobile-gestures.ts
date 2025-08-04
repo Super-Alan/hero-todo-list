@@ -63,7 +63,23 @@ export class MobileGestureHandler {
   }
 
   private handleTouchStart(event: TouchEvent) {
-    event.preventDefault()
+    // 检查触摸目标是否是交互元素（按钮、输入框等）
+    const target = event.target as HTMLElement
+    const isInteractiveElement = target.tagName === 'BUTTON' || 
+                                target.tagName === 'INPUT' || 
+                                target.tagName === 'TEXTAREA' || 
+                                target.tagName === 'SELECT' || 
+                                target.tagName === 'A' ||
+                                target.closest('button') ||
+                                target.closest('input') ||
+                                target.closest('textarea') ||
+                                target.closest('select') ||
+                                target.closest('a')
+    
+    // 如果不是交互元素，才阻止默认行为
+    if (!isInteractiveElement) {
+      event.preventDefault()
+    }
     
     const touch = event.touches[0]
     this.touchStart = {
@@ -88,7 +104,23 @@ export class MobileGestureHandler {
   }
 
   private handleTouchMove(event: TouchEvent) {
-    event.preventDefault()
+    // 检查触摸目标是否是交互元素
+    const target = event.target as HTMLElement
+    const isInteractiveElement = target.tagName === 'BUTTON' || 
+                                target.tagName === 'INPUT' || 
+                                target.tagName === 'TEXTAREA' || 
+                                target.tagName === 'SELECT' || 
+                                target.tagName === 'A' ||
+                                target.closest('button') ||
+                                target.closest('input') ||
+                                target.closest('textarea') ||
+                                target.closest('select') ||
+                                target.closest('a')
+    
+    // 如果不是交互元素，才阻止默认行为
+    if (!isInteractiveElement) {
+      event.preventDefault()
+    }
 
     if (event.touches.length === 2) {
       // 处理双指缩放
@@ -100,7 +132,23 @@ export class MobileGestureHandler {
   }
 
   private handleTouchEnd(event: TouchEvent) {
-    event.preventDefault()
+    // 检查触摸目标是否是交互元素
+    const target = event.target as HTMLElement
+    const isInteractiveElement = target.tagName === 'BUTTON' || 
+                                target.tagName === 'INPUT' || 
+                                target.tagName === 'TEXTAREA' || 
+                                target.tagName === 'SELECT' || 
+                                target.tagName === 'A' ||
+                                target.closest('button') ||
+                                target.closest('input') ||
+                                target.closest('textarea') ||
+                                target.closest('select') ||
+                                target.closest('a')
+    
+    // 如果不是交互元素，才阻止默认行为
+    if (!isInteractiveElement) {
+      event.preventDefault()
+    }
 
     if (this.longPressTimer) {
       clearTimeout(this.longPressTimer)
@@ -127,7 +175,23 @@ export class MobileGestureHandler {
   }
 
   private handleTouchCancel(event: TouchEvent) {
-    event.preventDefault()
+    // 检查触摸目标是否是交互元素
+    const target = event.target as HTMLElement
+    const isInteractiveElement = target.tagName === 'BUTTON' || 
+                                target.tagName === 'INPUT' || 
+                                target.tagName === 'TEXTAREA' || 
+                                target.tagName === 'SELECT' || 
+                                target.tagName === 'A' ||
+                                target.closest('button') ||
+                                target.closest('input') ||
+                                target.closest('textarea') ||
+                                target.closest('select') ||
+                                target.closest('a')
+    
+    // 如果不是交互元素，才阻止默认行为
+    if (!isInteractiveElement) {
+      event.preventDefault()
+    }
     
     if (this.longPressTimer) {
       clearTimeout(this.longPressTimer)
@@ -283,4 +347,4 @@ export const mobileUtils = {
       viewport.setAttribute('content', `width=device-width, initial-scale=${scale}, maximum-scale=${scale}, user-scalable=no`)
     }
   }
-} 
+}

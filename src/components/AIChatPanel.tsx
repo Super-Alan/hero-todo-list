@@ -42,8 +42,12 @@ export default function AIChatPanel({
   const [keyboardHeight, setKeyboardHeight] = useState(0)
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
   const [showCopyButtons, setShowCopyButtons] = useState(!mobileUtils.isMobile())
+  const [inputHistory, setInputHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const modelSelectorRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -53,12 +57,53 @@ export default function AIChatPanel({
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus()
+      // 初始化textarea高度
+      adjustTextareaHeight(inputRef.current)
     }
   }, [isOpen])
 
+  // 当输入值变化时调整高度
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (inputRef.current) {
+      adjustTextareaHeight(inputRef.current)
+    }
+  }, [inputValue])
+
+  // 当分析完成时，确保输入框重新可用
+  useEffect(() => {
+    if (!isAnalyzing && isOpen && inputRef.current) {
+      // 确保输入框不再被禁用，并重新获得焦点
+      setTimeout(() => {
+        if (inputRef.current && isOpen) {
+          inputRef.current.disabled = false
+          inputRef.current.focus()
+        }
+      }, 50)
+    }
+  }, [isAnalyzing, isOpen])
+
+  // 智能滚动：只有当用户在底部时才自动滚动
+  useEffect(() => {
+    if (isAtBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, isAtBottom])
+
+  // 监听滚动位置
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+      setIsAtBottom(isNearBottom)
+      setShowScrollToBottom(!isNearBottom && messages.length > 0)
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [messages.length])
 
   useEffect(() => {
     if (initialInput && isOpen && initialInput.trim()) {
@@ -329,24 +374,40 @@ export default function AIChatPanel({
       ))
     } finally {
       setIsAnalyzing(false)
+      // 确保输入框重新获得焦点
+      setTimeout(() => {
+        if (inputRef.current && isOpen) {
+          inputRef.current.focus()
+        }
+      }, 100)
     }
   }
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isAnalyzing || !selectedModel) return
 
+    const currentInput = inputValue.trim()
+    
+    // 更新输入历史
+    setInputHistory(prev => {
+      const newHistory = [currentInput, ...prev.filter(item => item !== currentInput)]
+      return newHistory.slice(0, 50) // 保留最近50条
+    })
+    setHistoryIndex(-1)
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue.trim(),
+      content: currentInput,
       timestamp: new Date()
     }
 
     setMessages(prev => [...prev, userMessage])
     setIsAnalyzing(true)
-    
-    const currentInput = inputValue.trim()
     setInputValue('')
+    
+    // 发送消息后滚动到底部
+    setIsAtBottom(true)
 
     // Create assistant message for streaming
     const assistantMessageId = (Date.now() + 1).toString()
@@ -413,14 +474,80 @@ export default function AIChatPanel({
       ))
     } finally {
       setIsAnalyzing(false)
+      // 确保输入框重新获得焦点
+      setTimeout(() => {
+        if (inputRef.current && isOpen) {
+          inputRef.current.focus()
+        }
+      }, 100)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setIsAtBottom(true)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
+    } else if (e.key === 'ArrowUp' && inputHistory.length > 0) {
+      const textarea = e.currentTarget
+      const cursorPosition = textarea.selectionStart
+      const isOnFirstLine = textarea.value.substring(0, cursorPosition).indexOf('\n') === -1
+      
+      if (isOnFirstLine) {
+        e.preventDefault()
+        const newIndex = Math.min(historyIndex + 1, inputHistory.length - 1)
+        if (newIndex >= 0) {
+          setHistoryIndex(newIndex)
+          setInputValue(inputHistory[newIndex])
+          setTimeout(() => {
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+          }, 0)
+        }
+      }
+    } else if (e.key === 'ArrowDown') {
+      const textarea = e.currentTarget
+      const cursorPosition = textarea.selectionStart
+      const remainingText = textarea.value.substring(cursorPosition)
+      const isOnLastLine = remainingText.indexOf('\n') === -1
+      
+      if (isOnLastLine) {
+        e.preventDefault()
+        if (historyIndex > 0) {
+          const newIndex = historyIndex - 1
+          setHistoryIndex(newIndex)
+          setInputValue(inputHistory[newIndex])
+          setTimeout(() => {
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+          }, 0)
+        } else if (historyIndex === 0) {
+          setHistoryIndex(-1)
+          setInputValue('')
+        }
+      }
+    } else if (e.key === 'Escape') {
+      if (inputValue.trim()) {
+        setInputValue('')
+        setHistoryIndex(-1)
+      } else {
+        onClose()
+      }
     }
+  }
+
+  // 自动调整textarea高度
+  const adjustTextareaHeight = (textarea: HTMLTextAreaElement) => {
+    textarea.style.height = 'auto'
+    const maxHeight = 120 // 最大高度
+    textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + 'px'
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value)
+    adjustTextareaHeight(e.target)
   }
 
   const handleConfirmTasks = () => {
@@ -455,7 +582,11 @@ export default function AIChatPanel({
       `}
       style={{
         ...(!isMobile ? { width: panelWidth } : {}),
-        ...(isMobile && isKeyboardVisible ? { height: `calc(100vh - ${keyboardHeight}px)` } : {})
+        ...(isMobile ? {
+          height: isKeyboardVisible ? `calc(100vh - ${keyboardHeight}px)` : '100vh'
+        } : {}),
+        maxHeight: '100vh', // 确保面板不超出视口
+        overflow: 'hidden' // 防止整个面板滚动
       }}
 
     >
@@ -548,10 +679,16 @@ export default function AIChatPanel({
       {/* Messages */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 lg:space-y-4 overscroll-behavior-y-contain"
+        className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 lg:space-y-4 overscroll-behavior-y-contain min-h-0"
         style={{
           WebkitOverflowScrolling: 'touch', // iOS 惯性滚动
-          scrollBehavior: 'smooth'
+          scrollBehavior: 'smooth',
+          // 动态计算最大高度：视口高度 - 头部(约70px) - 输入框区域(约120px) - 建议任务区域(如果存在)
+          maxHeight: isMobile 
+            ? (isKeyboardVisible 
+                ? `calc(100vh - ${keyboardHeight + 190}px)` 
+                : `calc(100vh - ${suggestedTasks.length > 0 ? '350px' : '190px'})`) 
+            : `calc(100vh - ${suggestedTasks.length > 0 ? '350px' : '190px'})`
         }}
       >
         {messages.length === 0 && (
@@ -659,6 +796,17 @@ export default function AIChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Scroll to bottom button */}
+      {showScrollToBottom && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-20 right-4 bg-white border border-gray-300 rounded-full p-2 shadow-lg hover:bg-gray-50 transition-all duration-200 z-10"
+          title="滚动到底部"
+        >
+          <ChevronDownIcon className="w-4 h-4 text-gray-600" />
+        </button>
+      )}
+
       {/* Suggested Tasks */}
       {suggestedTasks.length > 0 && (
         <div className="border-t border-gray-200 p-3 lg:p-4 max-h-48 lg:max-h-64 overflow-y-auto">
@@ -718,40 +866,64 @@ export default function AIChatPanel({
           transition: 'padding 0.3s ease'
         }}
       >
-        <div className="flex items-center space-x-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="描述您的目标或任务..."
-            className={`
-              flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm 
-              focus:outline-none focus:ring-2 focus:ring-blue-500
-              ${isMobile ? 'min-h-[44px]' : ''}
-            `}
-            style={{
-              fontSize: isMobile ? '16px' : undefined, // 防止iOS缩放
-              touchAction: 'manipulation'
-            }}
-            disabled={isAnalyzing}
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isAnalyzing || !selectedModel}
-            className={`
-              p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 
-              disabled:bg-gray-300 transition-colors
-              ${isMobile ? 'min-w-[44px] min-h-[44px] active:bg-blue-700' : ''}
-            `}
-            style={{
-              touchAction: 'manipulation'
-            }}
-            title={!selectedModel ? '请先选择一个模型' : ''}
-          >
-            <PaperAirplaneIcon className="w-4 h-4" />
-          </button>
+        <div className="space-y-2">
+          {/* Input history indicator */}
+          {historyIndex >= 0 && inputHistory.length > 0 && (
+            <div className="text-xs text-gray-500 px-2">
+              历史记录 {historyIndex + 1}/{inputHistory.length} • ↑↓ 浏览历史 • Esc 清空
+            </div>
+          )}
+          
+          <div className="flex items-end space-x-2">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder={isAnalyzing ? "AI正在思考中..." : !selectedModel ? "请先选择一个模型" : "描述您的目标或任务..."}
+                className={`
+                  w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none
+                  focus:outline-none focus:ring-2 focus:ring-blue-500
+                  ${isMobile ? 'min-h-[44px]' : ''}
+                  ${isAnalyzing ? 'bg-gray-50 cursor-not-allowed' : ''}
+                `}
+                style={{
+                  fontSize: isMobile ? '16px' : undefined, // 防止iOS缩放
+                  touchAction: 'manipulation',
+                  minHeight: '44px',
+                  maxHeight: '120px'
+                }}
+                disabled={isAnalyzing}
+                rows={1}
+              />
+            </div>
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isAnalyzing || !selectedModel}
+              className={`
+                p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 
+                disabled:bg-gray-300 transition-all duration-200 flex-shrink-0
+                ${isMobile ? 'min-w-[44px] min-h-[44px] active:bg-blue-700' : ''}
+                ${isAnalyzing ? 'animate-pulse' : ''}
+              `}
+              style={{
+                touchAction: 'manipulation'
+              }}
+              title={!selectedModel ? '请先选择一个模型' : ''}
+            >
+              {isAnalyzing ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <PaperAirplaneIcon className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+          
+          {/* Keyboard shortcuts hint */}
+          <div className="text-xs text-gray-400 px-2">
+            Enter 发送 • Shift+Enter 换行 • ↑↓ 历史记录
+          </div>
         </div>
       </div>
       
