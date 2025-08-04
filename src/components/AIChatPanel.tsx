@@ -46,6 +46,8 @@ export default function AIChatPanel({
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [showScrollToBottom, setShowScrollToBottom] = useState(false)
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
+  const [isLongPressing, setIsLongPressing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const modelSelectorRef = useRef<HTMLDivElement>(null)
@@ -224,9 +226,78 @@ export default function AIChatPanel({
       await navigator.clipboard.writeText(content)
       setCopiedMessageId(messageId)
       setTimeout(() => setCopiedMessageId(null), 2000)
+      
+      // 移动端显示复制成功提示
+      if (isMobile) {
+        const feedback = document.getElementById('copy-feedback')
+        if (feedback) {
+          feedback.textContent = '已复制全部内容'
+          feedback.style.left = '50%'
+          feedback.style.top = '50%'
+          feedback.style.transform = 'translate(-50%, -50%)'
+          feedback.style.opacity = '1'
+          setTimeout(() => {
+            feedback.style.opacity = '0'
+          }, 1500)
+        }
+      }
     } catch (error) {
       console.error('Failed to copy text:', error)
     }
+  }
+
+  // 复制全部对话
+  const handleCopyAllMessages = async () => {
+    try {
+      const allContent = messages
+        .filter(msg => msg.content.trim())
+        .map(msg => `${msg.role === 'user' ? '用户' : 'AI助手'}: ${msg.content}`)
+        .join('\n\n')
+      
+      await navigator.clipboard.writeText(allContent)
+      
+      if (isMobile) {
+        const feedback = document.getElementById('copy-feedback')
+        if (feedback) {
+          feedback.textContent = '已复制全部对话'
+          feedback.style.left = '50%'
+          feedback.style.top = '50%'
+          feedback.style.transform = 'translate(-50%, -50%)'
+          feedback.style.opacity = '1'
+          setTimeout(() => {
+            feedback.style.opacity = '0'
+          }, 1500)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to copy all messages:', error)
+    }
+  }
+
+  // 长按开始
+  const handleLongPressStart = (messageId: string, content: string) => {
+    if (!isMobile) return
+    
+    const timer = setTimeout(() => {
+      setIsLongPressing(true)
+      // 触发震动反馈（如果支持）
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
+      // 显示复制选项
+      handleCopyMessage(messageId, content)
+    }, 500) // 500ms长按
+    
+    setLongPressTimer(timer)
+  }
+
+  // 长按结束
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
+    }
+    setIsLongPressing(false)
   }
 
   const handleCopySelection = async (event?: React.MouseEvent | React.TouchEvent) => {
@@ -605,6 +676,24 @@ export default function AIChatPanel({
           <h2 className="text-lg font-semibold text-gray-900">AI 助手</h2>
         </div>
         <div className="flex items-center space-x-2">
+          {/* 复制全部对话按钮 */}
+          {messages.length > 0 && (
+            <button
+              onClick={handleCopyAllMessages}
+              className={`flex items-center space-x-1 px-2 py-1 text-xs rounded-md transition-colors ${
+                isMobile 
+                  ? 'bg-blue-500 text-white active:bg-blue-600' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title="复制全部对话"
+              style={{
+                touchAction: 'manipulation'
+              }}
+            >
+              <ClipboardIcon className="w-3 h-3" />
+              <span>复制全部</span>
+            </button>
+          )}
           {/* Model Selector */}
           <div className="relative" ref={modelSelectorRef}>
             <button
@@ -708,9 +797,20 @@ export default function AIChatPanel({
                   message.role === 'user'
                     ? 'bg-blue-500 text-white'
                     : 'bg-gray-100 text-gray-900'
-                } ${isMobile ? 'active:bg-opacity-80 transition-all duration-150' : ''}`}
+                } ${isMobile ? 'active:bg-opacity-80 transition-all duration-150' : ''} ${
+                  isLongPressing ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+                }`}
                 onMouseUp={handleCopySelection}
-                onTouchEnd={mobileUtils.isMobile() ? handleCopySelection : undefined}
+                onTouchStart={isMobile && message.role === 'assistant' ? 
+                  () => handleLongPressStart(message.id, message.content) : undefined
+                }
+                onTouchEnd={(e) => {
+                  handleLongPressEnd()
+                  if (mobileUtils.isMobile()) {
+                    handleCopySelection(e)
+                  }
+                }}
+                onTouchCancel={handleLongPressEnd}
                 style={{
                   minHeight: isMobile ? '44px' : 'auto', // 确保移动端触摸目标足够大
                   userSelect: 'text',
@@ -756,27 +856,42 @@ export default function AIChatPanel({
               
               {/* Copy button */}
               {message.role === 'assistant' && message.content && !message.isStreaming && (
-                <button
-                  onClick={() => handleCopyMessage(message.id, message.content)}
-                  className={`
-                    absolute top-2 right-2 transition-opacity p-1 rounded bg-white shadow-sm border border-gray-200 hover:bg-gray-50
-                    ${isMobile 
-                      ? (showCopyButtons ? 'opacity-100' : 'opacity-0') 
-                      : 'opacity-0 group-hover:opacity-100'
-                    }
-                    ${isMobile ? 'min-w-[44px] min-h-[44px] flex items-center justify-center' : ''}
-                  `}
-                  title="复制全部内容"
-                  style={{
-                    touchAction: 'manipulation' // 防止双击缩放
-                  }}
-                >
-                  {copiedMessageId === message.id ? (
-                    <CheckIcon className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'} text-green-500`} />
+                <div className="flex space-x-1 mt-2">
+                  {/* 移动端显示更明显的复制按钮 */}
+                  {isMobile ? (
+                    <button
+                      onClick={() => handleCopyMessage(message.id, message.content)}
+                      className="flex items-center space-x-1 px-3 py-1.5 bg-blue-500 text-white text-xs rounded-full shadow-sm active:bg-blue-600 transition-colors"
+                      style={{
+                        touchAction: 'manipulation'
+                      }}
+                    >
+                      {copiedMessageId === message.id ? (
+                        <>
+                          <CheckIcon className="w-3 h-3" />
+                          <span>已复制</span>
+                        </>
+                      ) : (
+                        <>
+                          <ClipboardIcon className="w-3 h-3" />
+                          <span>复制全部</span>
+                        </>
+                      )}
+                    </button>
                   ) : (
-                    <ClipboardIcon className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'} text-gray-500`} />
+                    <button
+                      onClick={() => handleCopyMessage(message.id, message.content)}
+                      className="absolute top-2 right-2 transition-opacity p-1 rounded bg-white shadow-sm border border-gray-200 hover:bg-gray-50 opacity-0 group-hover:opacity-100"
+                      title="复制全部内容"
+                    >
+                      {copiedMessageId === message.id ? (
+                        <CheckIcon className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <ClipboardIcon className="w-4 h-4 text-gray-500" />
+                      )}
+                    </button>
                   )}
-                </button>
+                </div>
               )}
             </div>
           </div>
@@ -857,6 +972,19 @@ export default function AIChatPanel({
           </div>
         </div>
       )}
+
+      {/* 复制反馈提示 */}
+      <div
+        id="copy-feedback"
+        className="fixed z-50 px-4 py-2 bg-black bg-opacity-80 text-white text-sm rounded-lg pointer-events-none transition-opacity duration-300 opacity-0"
+        style={{
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)'
+        }}
+      >
+        已复制到剪贴板
+      </div>
 
       {/* Input */}
       <div 
