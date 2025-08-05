@@ -44,7 +44,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
       const scoreResult = TaskQualityScorer.scoreTask(inputValue);
       setQualityScore(scoreResult.totalScore);
       setQualityDetails(scoreResult);
-      setShowQualityHint(scoreResult.totalScore < 60);
+      setShowQualityHint(scoreResult.totalScore < 30);
     } else {
       setQualityScore(null);
       setQualityDetails(null);
@@ -72,8 +72,8 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
       return;
     }
 
-    // 如果质量分数低于60分，弹出AI助手
-    if (qualityScore !== null && qualityScore < 60 && onOpenAIChat) {
+    // 如果质量分数低于30分，弹出AI助手
+    if (qualityScore !== null && qualityScore < 30 && onOpenAIChat) {
       onOpenAIChat(inputValue);
       setInputValue('');
       setParsedTask(null);
