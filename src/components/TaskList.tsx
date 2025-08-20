@@ -3,6 +3,7 @@
 import { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, Circle, Calendar, Flag, MoreHorizontal, Loader2, GripVertical, Edit2, Trash2, ExternalLink, Square, CheckSquare, X, Plus, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import { 
   DndContext, 
   closestCenter, 
@@ -343,7 +344,13 @@ const SortableTask = ({
 
           {/* 元数据 */}
           <div className="flex items-center space-x-4 text-xs text-gray-500">
-
+            {/* 周期性任务指示器 */}
+            {task.isRecurring && (
+              <div className="flex items-center space-x-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                <ArrowPathIcon className="h-3 w-3" />
+                <span className="font-medium">周期</span>
+              </div>
+            )}
 
             {/* 截止日期 */}
             {task.dueDate && (

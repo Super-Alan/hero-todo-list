@@ -193,7 +193,7 @@ const TaskTemplates: React.FC<TaskTemplatesProps> = ({
                               <button
                                 onClick={() => {
                                   onAdvancedEdit(example)
-                                  onClose()
+                                  // 不立即关闭，让父组件在适当时机关闭
                                 }}
                                 className="flex-1 text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 transition-colors"
                               >

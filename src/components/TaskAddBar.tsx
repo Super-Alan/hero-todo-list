@@ -200,7 +200,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
   };
 
   // 重置所有状态的函数
-  const resetAllStates = useCallback(() => {
+  const resetAllStates = useCallback((preserveAdvancedCreate = false) => {
     setInputValue('');
     setParsedTask(null);
     setQualityScore(null);
@@ -211,7 +211,9 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
     setShowTaskTemplates(false);
     setGuidanceResult(null);
     setTemplateSelected(false);
-    setShowAdvancedCreate(false);
+    if (!preserveAdvancedCreate) {
+      setShowAdvancedCreate(false);
+    }
   }, []);
 
   // 优化的模板选择处理函数
@@ -280,7 +282,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
       }
 
       // 重置状态
-      resetAllStates();
+      resetAllStates(false);
       setIsActive(false);
     } catch (error) {
       console.error('创建高级任务失败:', error);
@@ -293,7 +295,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
       <div className="space-y-3">
         <button
           onClick={() => {
-            resetAllStates();
+            resetAllStates(false);
             setIsActive(true);
           }}
           className="w-full flex items-center card-modern p-3 lg:p-4 rounded-xl lg:rounded-2xl text-left group hover:shadow-tech transition-all duration-300"
@@ -497,20 +499,23 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
         isVisible={showTaskTemplates}
         onClose={() => {
           setShowTaskTemplates(false);
-          // 只有在真正没有输入内容且没有模板被选择时才重置状态
+          // 只有在真正没有输入内容且没有模板被选择时且没有打开高级创建器时才重置状态
           // 使用延迟检查避免状态更新竞态条件
           setTimeout(() => {
-            if (!inputValue.trim() && !templateSelected) {
-              resetAllStates();
+            if (!inputValue.trim() && !templateSelected && !showAdvancedCreate) {
+              resetAllStates(false); // Don't preserve advanced create
               setIsActive(false);
             }
           }, 50);
         }}
         onSelectTemplate={handleTemplateSelect}
         onAdvancedEdit={(template) => {
-          setInputValue(template);
-          setShowTaskTemplates(false);
-          setShowAdvancedCreate(true);
+          // 使用 React 18 的 startTransition 确保状态更新的原子性
+          React.startTransition(() => {
+            setInputValue(template);
+            setShowTaskTemplates(false);
+            setShowAdvancedCreate(true);
+          });
         }}
         isMobile={isMobile}
       />
