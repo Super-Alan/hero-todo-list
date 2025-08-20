@@ -47,6 +47,7 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
+  password      String? // 用于邮箱密码登录
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
