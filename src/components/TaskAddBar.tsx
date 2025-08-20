@@ -1,9 +1,11 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { parseTaskFromInput } from '@/lib/taskParser';
 import { CreateTaskInput } from '@/types';
 import { Priority } from '@/types';
+import { CreateTaskInputWithRecurring } from '@/types/recurring';
+import { RecurringTaskUtils } from '@/lib/recurringTasks';
 import { CalendarIcon, TagIcon, FlagIcon } from '@heroicons/react/24/outline';
 import { tagService } from '@/lib/tagService';
 import { TaskQualityScorer } from '@/lib/task-quality-scorer';
@@ -12,6 +14,7 @@ import SmartTaskAdvisor from './SmartTaskAdvisor';
 import TaskGuidancePanel from './TaskGuidancePanel';
 import SmartTaskSuggestions from './SmartTaskSuggestions';
 import TaskTemplates from './TaskTemplates';
+import SimpleQuickAdd from './SimpleQuickAdd';
 import { useModelProvider } from '@/contexts/ModelProviderContext';
 
 interface TaskAddBarProps {
@@ -42,6 +45,8 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
   const [showSmartSuggestions, setShowSmartSuggestions] = useState(false);
   const [showTaskTemplates, setShowTaskTemplates] = useState(false);
   const [guidanceResult, setGuidanceResult] = useState<any>(null);
+  const [templateSelected, setTemplateSelected] = useState(false);
+  const [showAdvancedCreate, setShowAdvancedCreate] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { selectedModel } = useModelProvider();
@@ -129,6 +134,11 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      // 如果正在显示模板选择器或高级创建器，不处理外部点击
+      if (showTaskTemplates || showAdvancedCreate) {
+        return;
+      }
+      
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         if (inputValue.trim()) {
           handleSubmit();
@@ -142,7 +152,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wrapperRef, inputValue]);
+  }, [wrapperRef, inputValue, showTaskTemplates, showAdvancedCreate]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -150,6 +160,10 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
     } else if (e.key === 'Escape') {
       setInputValue('');
       setIsActive(false);
+    } else if (e.key === 'Tab' && !inputValue.trim()) {
+      // 当输入框为空时，Tab键可以打开模板选择
+      e.preventDefault();
+      setShowTaskTemplates(true);
     }
   };
 
@@ -186,7 +200,7 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
   };
 
   // 重置所有状态的函数
-  const resetAllStates = () => {
+  const resetAllStates = useCallback(() => {
     setInputValue('');
     setParsedTask(null);
     setQualityScore(null);
@@ -196,11 +210,87 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
     setShowSmartSuggestions(false);
     setShowTaskTemplates(false);
     setGuidanceResult(null);
+    setTemplateSelected(false);
+    setShowAdvancedCreate(false);
+  }, []);
+
+  // 优化的模板选择处理函数
+  const handleTemplateSelect = useCallback((template: string) => {
+    // 使用 React 18 的批处理更新，确保状态原子性
+    React.startTransition(() => {
+      setInputValue(template);
+      setTemplateSelected(true);
+      
+      // 激活TaskAddBar
+      if (!isActive) {
+        setIsActive(true);
+      }
+      
+      // 在状态更新完成后关闭模板选择器
+      setShowTaskTemplates(false);
+    });
+    
+    // 延迟聚焦确保所有状态更新完成
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.setSelectionRange(template.length, template.length);
+      }
+    }, 100); // 减少延迟时间
+    
+    // 3秒后清除模板选择状态
+    setTimeout(() => {
+      setTemplateSelected(false);
+    }, 3000);
+  }, [isActive]);
+
+  // 处理高级任务创建
+  const handleAdvancedTaskCreate = async (taskData: CreateTaskInputWithRecurring) => {
+    try {
+      // 处理标签名称转换为ID
+      let finalTagIds: string[] = [];
+      if (taskData.tagIds && taskData.tagIds.length > 0) {
+        finalTagIds = await tagService.getOrCreateTagIds(taskData.tagIds);
+      }
+
+      // 构建基础任务数据
+      const baseTaskData: CreateTaskInput = {
+        title: taskData.title,
+        description: taskData.description,
+        dueDate: taskData.dueDate,
+        dueTime: taskData.dueTime,
+        priority: taskData.priority,
+        parentTaskId: taskData.parentTaskId,
+        tagIds: finalTagIds
+      };
+
+      if (taskData.isRecurring && taskData.recurringRule) {
+        // 创建周期性任务
+        const recurringTaskData = {
+          ...baseTaskData,
+          isRecurring: true,
+          recurringRule: RecurringTaskUtils.ruleToJson(taskData.recurringRule)
+        };
+
+        // 使用原有的onTaskSubmit，但需要扩展类型
+        await onTaskSubmit(recurringTaskData as any);
+      } else {
+        // 创建普通任务
+        await onTaskSubmit(baseTaskData);
+      }
+
+      // 重置状态
+      resetAllStates();
+      setIsActive(false);
+    } catch (error) {
+      console.error('创建高级任务失败:', error);
+    }
   };
 
-  if (!isActive) {
-    return (
-      <div className="mb-4 lg:mb-6">
+  // 非激活状态的渲染
+  const renderInactiveState = () => (
+    <div className="mb-4 lg:mb-6">
+      <div className="space-y-3">
         <button
           onClick={() => {
             resetAllStates();
@@ -228,20 +318,45 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
             {isMobile ? '添加任务...' : '添加任务，例如：明天下午3点开会 #工作 !重要'}
           </span>
         </button>
+        
+        {/* 智能建议快捷按钮 */}
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => setShowTaskTemplates(true)}
+            className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg transition-all duration-200"
+          >
+            <span>💡</span>
+            <span>智能建议</span>
+            <span className="text-xs text-gray-500">选择模板快速创建</span>
+          </button>
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div ref={wrapperRef} className="relative mb-4 lg:mb-6 card-modern p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 border-primary-500/30 shadow-tech">
+    <>
+      {/* 主要内容 */}
+      {!isActive ? renderInactiveState() : (
+        <div ref={wrapperRef} className="relative mb-4 lg:mb-6 card-modern p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 border-primary-500/30 shadow-tech">
+      {/* 模板选择成功提示 */}
+      {templateSelected && (
+        <div className="mb-3 p-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg animate-in fade-in duration-200">
+          <div className="flex items-center text-sm text-green-700">
+            <span className="mr-2">✅</span>
+            <span className="font-medium">模板已应用！你可以继续编辑任务内容</span>
+          </div>
+        </div>
+      )}
+      
       <input
         ref={inputRef}
         type="text"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={isMobile ? "输入任务..." : "输入任务后按 Enter 保存"}
-        className="w-full focus:outline-none text-sm lg:text-base bg-transparent text-gray-800 placeholder:text-gray-400"
+        placeholder={templateSelected ? "继续编辑任务..." : (isMobile ? "输入任务..." : "输入任务后按 Enter 保存，Tab 键选择模板")}
+        className={`w-full focus:outline-none text-sm lg:text-base bg-transparent text-gray-800 placeholder:text-gray-400 ${templateSelected ? 'border-l-4 border-l-green-500 pl-2' : ''}`}
         disabled={isProcessing}
       />
       {/* 增强的质量评分提示 */}
@@ -330,6 +445,14 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
             <span>🤖</span>
             <span className={isMobile ? 'hidden' : ''}>AI 助手</span>
           </button>
+          <button
+            onClick={() => setShowAdvancedCreate(true)}
+            className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center space-x-1 transition-colors"
+            disabled={isProcessing}
+          >
+            <span>⚙️</span>
+            <span className={isMobile ? 'hidden' : ''}>高级编辑</span>
+          </button>
         </div>
         <button
           onClick={handleSubmit}
@@ -366,28 +489,41 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
         onApplySuggestion={handleApplySuggestion}
         isMobile={isMobile}
       />
+        </div>
+      )}
 
-      {/* 任务模板 */}
+      {/* 任务模板 - 移到最外层，不受isActive状态影响 */}
       <TaskTemplates
         isVisible={showTaskTemplates}
         onClose={() => {
           setShowTaskTemplates(false);
-          // 如果没有输入内容，关闭整个任务添加器并重置所有状态
-          if (!inputValue.trim()) {
-            resetAllStates();
-            setIsActive(false);
-          }
+          // 只有在真正没有输入内容且没有模板被选择时才重置状态
+          // 使用延迟检查避免状态更新竞态条件
+          setTimeout(() => {
+            if (!inputValue.trim() && !templateSelected) {
+              resetAllStates();
+              setIsActive(false);
+            }
+          }, 50);
         }}
-        onSelectTemplate={(template) => {
+        onSelectTemplate={handleTemplateSelect}
+        onAdvancedEdit={(template) => {
           setInputValue(template);
           setShowTaskTemplates(false);
-          if (inputRef.current) {
-            inputRef.current.focus();
-          }
+          setShowAdvancedCreate(true);
         }}
         isMobile={isMobile}
       />
-    </div>
+
+      {/* 高级任务创建 - 移到最外层，不受isActive状态影响 */}
+      <SimpleQuickAdd
+        isVisible={showAdvancedCreate}
+        onClose={() => setShowAdvancedCreate(false)}
+        onTaskCreated={handleAdvancedTaskCreate}
+        initialTemplate={inputValue}
+        isMobile={isMobile}
+      />
+    </>
   );
 }
 

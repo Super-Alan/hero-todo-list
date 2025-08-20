@@ -24,6 +24,7 @@ interface TaskTemplatesProps {
   isVisible: boolean
   onClose: () => void
   onSelectTemplate: (template: string) => void
+  onAdvancedEdit?: (template: string) => void
   isMobile?: boolean
 }
 
@@ -31,6 +32,7 @@ const TaskTemplates: React.FC<TaskTemplatesProps> = ({
   isVisible,
   onClose,
   onSelectTemplate,
+  onAdvancedEdit,
   isMobile = false
 }) => {
   if (!isVisible) return null
@@ -117,8 +119,9 @@ const TaskTemplates: React.FC<TaskTemplatesProps> = ({
   ]
 
   const handleTemplateSelect = (example: string) => {
+    // 调用选择回调，不自动关闭模态框
+    // 让父组件决定何时关闭，避免状态竞态条件
     onSelectTemplate(example)
-    onClose()
   }
 
   return (
@@ -171,23 +174,35 @@ const TaskTemplates: React.FC<TaskTemplatesProps> = ({
                   {/* Template Examples */}
                   <div className="space-y-2">
                     {template.examples.map((example, index) => (
-                      <button
+                      <div
                         key={index}
-                        onClick={() => handleTemplateSelect(example)}
-                        className="w-full text-left p-3 bg-white rounded-lg hover:bg-blue-50 hover:border-blue-200 border border-gray-200 transition-all duration-200 group"
+                        className="bg-white rounded-lg border border-gray-200 transition-all duration-200 hover:shadow-md group"
                       >
-                        <div className="text-sm text-gray-700 group-hover:text-blue-700 leading-relaxed">
-                          {example}
+                        <div className="p-3">
+                          <div className="text-sm text-gray-700 leading-relaxed mb-3">
+                            {example}
+                          </div>
+                          <div className="flex items-center justify-between space-x-2">
+                            <button
+                              onClick={() => handleTemplateSelect(example)}
+                              className="flex-1 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              快速使用
+                            </button>
+                            {onAdvancedEdit && (
+                              <button
+                                onClick={() => {
+                                  onAdvancedEdit(example)
+                                  onClose()
+                                }}
+                                className="flex-1 text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 transition-colors"
+                              >
+                                高级编辑
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-gray-500 group-hover:text-blue-500">
-                            点击使用此模板
-                          </span>
-                          <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>

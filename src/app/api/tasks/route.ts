@@ -189,7 +189,9 @@ export async function POST(request: NextRequest) {
       dueTime,
       priority = 'MEDIUM',
       parentTaskId,
-      tagIds = []
+      tagIds = [],
+      isRecurring = false,
+      recurringRule = null
     } = data
 
     // 验证必填字段
@@ -220,6 +222,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 验证周期性任务规则
+    if (isRecurring && recurringRule) {
+      try {
+        JSON.parse(recurringRule)
+      } catch (error) {
+        return NextResponse.json({ error: '无效的周期性规则格式' }, { status: 400 })
+      }
+    }
+
     // 创建任务
     const task = await prisma.task.create({
       data: {
@@ -230,6 +241,8 @@ export async function POST(request: NextRequest) {
         priority,
         userId: session.user.id,
         parentTaskId,
+        isRecurring,
+        recurringRule,
         taskTags: {
           create: tagIds.map((tagId: string) => ({
             tagId

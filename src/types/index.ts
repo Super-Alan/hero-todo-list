@@ -22,6 +22,8 @@ export interface CreateTaskInput {
   priority?: Priority
   parentTaskId?: string
   tagIds?: string[]
+  isRecurring?: boolean
+  recurringRule?: string // JSON格式的周期规则
 }
 
 export interface UpdateTaskInput extends Partial<CreateTaskInput> {
