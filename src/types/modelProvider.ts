@@ -1,4 +1,4 @@
-// Model Provider Types
+// Model Provider Types (系统级别配置)
 export interface ModelProvider {
   id: string
   name: string
@@ -8,6 +8,8 @@ export interface ModelProvider {
   isActive: boolean
   createdAt: Date
   updatedAt: Date
+  // userId保留用于迁移，将来会移除
+  userId?: string
 }
 
 export interface CreateModelProviderInput {

@@ -13,7 +13,9 @@
     "db:generate": "prisma generate",
     "migrate:to-tags": "tsx scripts/migrate-to-tags.ts",
     "migrate:rollback": "tsx scripts/migrate-to-tags.ts rollback",
-    "migrate:cleanup": "tsx scripts/cleanup-database.ts"
+    "migrate:cleanup": "tsx scripts/cleanup-database.ts",
+    "create-admin": "tsx scripts/create-admin.ts",
+    "check-admin": "tsx scripts/check-admin.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -48,6 +50,7 @@
     "postcss": "^8.5.6",
     "prisma": "^6.2.0",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.20.5",
     "typescript": "5.8.3"
   }
 }

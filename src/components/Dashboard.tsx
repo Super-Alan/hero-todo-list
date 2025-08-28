@@ -10,7 +10,6 @@ import TaskList from './TaskList'
 import SmartQuickAdd from './QuickAdd/SmartQuickAdd'
 import TaskAddBar from './TaskAddBar'
 import AIChatPanel from './AIChatPanel';
-import ModelSettings from './ModelSettings'
 import { useKeyboardShortcuts, createShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { Menu, X } from 'lucide-react'
 
@@ -29,7 +28,6 @@ export default function Dashboard() {
   const sidebarRef = useRef<{ refreshTags: () => void; refreshTaskStats: () => void } | null>(null)
   const [isAIChatPanelOpen, setIsAIChatPanelOpen] = useState(false);
   const [aiChatInitialInput, setAiChatInitialInput] = useState('');
-  const [showModelSettings, setShowModelSettings] = useState(false);
   
   // 移动端状态管理
   const [isMobile, setIsMobile] = useState(false)
@@ -249,7 +247,6 @@ export default function Dashboard() {
       `}>
         {/* 头部 */}
         <Header 
-          onOpenModelSettings={() => setShowModelSettings(true)}
           onSearch={handleSearchQuery}
           onClearSearch={handleClearSearchQuery}
           searchQuery={searchQuery}
@@ -324,11 +321,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 模型设置弹窗 */}
-      <ModelSettings 
-        isOpen={showModelSettings}
-        onClose={() => setShowModelSettings(false)}
-      />
     </div>
   )
 }

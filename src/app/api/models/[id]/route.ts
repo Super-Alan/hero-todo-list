@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-// 获取单个模型
+// 获取单个系统级别模型
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -14,20 +14,9 @@ export async function GET(
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
-    }
-
     const resolvedParams = await params
-    const model = await prisma.modelProvider.findFirst({
-      where: { 
-        id: resolvedParams.id,
-        userId: user.id
-      }
+    const model = await prisma.modelProvider.findUnique({
+      where: { id: resolvedParams.id }
     })
 
     if (!model) {
@@ -47,7 +36,7 @@ export async function GET(
   }
 }
 
-// 更新模型
+// 更新系统级别模型
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -56,14 +45,6 @@ export async function PUT(
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
     const resolvedParams = await params
@@ -78,12 +59,9 @@ export async function PUT(
       )
     }
 
-    // 检查模型是否存在且属于当前用户
-    const existingModel = await prisma.modelProvider.findFirst({
-      where: { 
-        id: resolvedParams.id,
-        userId: user.id
-      }
+    // 检查模型是否存在
+    const existingModel = await prisma.modelProvider.findUnique({
+      where: { id: resolvedParams.id }
     })
 
     if (!existingModel) {
@@ -93,11 +71,10 @@ export async function PUT(
       )
     }
 
-    // 检查名称冲突（排除当前模型，且在同一用户下）
+    // 检查系统级别名称冲突（排除当前模型）
     const nameConflict = await prisma.modelProvider.findFirst({
       where: {
         name,
-        userId: user.id,
         id: { not: resolvedParams.id }
       }
     })
@@ -130,7 +107,7 @@ export async function PUT(
   }
 }
 
-// 部分更新模型
+// 部分更新系统级别模型
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -141,24 +118,13 @@ export async function PATCH(
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
-    }
-
     const resolvedParams = await params
     const body = await request.json()
     const { apiKey, isActive } = body
 
-    // 检查模型是否存在且属于当前用户
-    const existingModel = await prisma.modelProvider.findFirst({
-      where: { 
-        id: resolvedParams.id,
-        userId: user.id
-      }
+    // 检查模型是否存在
+    const existingModel = await prisma.modelProvider.findUnique({
+      where: { id: resolvedParams.id }
     })
 
     if (!existingModel) {
@@ -188,7 +154,7 @@ export async function PATCH(
   }
 }
 
-// 删除模型
+// 删除系统级别模型
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -199,22 +165,11 @@ export async function DELETE(
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
-    }
-
     const resolvedParams = await params
     
-    // 检查模型是否存在且属于当前用户
-    const existingModel = await prisma.modelProvider.findFirst({
-      where: { 
-        id: resolvedParams.id,
-        userId: user.id
-      }
+    // 检查模型是否存在
+    const existingModel = await prisma.modelProvider.findUnique({
+      where: { id: resolvedParams.id }
     })
 
     if (!existingModel) {

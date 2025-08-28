@@ -5,6 +5,7 @@ import GitHubProvider from 'next-auth/providers/github'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
+import { Role } from '@prisma/client'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -31,7 +32,15 @@ export const authOptions: NextAuthOptions = {
 
         // 查找用户
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() }
+          where: { email: credentials.email.toLowerCase() },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            password: true,
+            role: true
+          }
         })
 
         if (!user || !user.password) {
@@ -50,6 +59,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           image: user.image,
+          role: user.role,
         }
       }
     }),
@@ -69,19 +79,31 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    session: ({ session, token }) => {
+    session: async ({ session, token }) => {
       return {
         ...session,
         user: {
           ...session.user,
           id: token.sub,
+          role: token.role,
         },
       }
     },
-    jwt: ({ token, user, account }) => {
+    jwt: async ({ token, user, account }) => {
       if (user) {
         token.sub = user.id
+        token.role = user.role
       }
+      
+      // 每次JWT刷新时都重新获取用户角色（确保角色变更能及时生效）
+      if (token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true }
+        })
+        token.role = dbUser?.role || Role.USER
+      }
+      
       if (account) {
         token.accessToken = account.access_token
       }

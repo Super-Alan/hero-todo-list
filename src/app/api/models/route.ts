@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-// 获取当前用户的模型
+// 获取系统级别的模型提供商
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -15,19 +15,8 @@ export async function GET() {
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: '用户不存在' },
-        { status: 404 }
-      )
-    }
-
     const models = await prisma.modelProvider.findMany({
-      where: { userId: user.id },
+      where: { isActive: true },
       orderBy: {
         createdAt: 'desc'
       }
@@ -43,7 +32,7 @@ export async function GET() {
   }
 }
 
-// 创建新模型
+// 创建新的系统级别模型提供商
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -52,17 +41,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: '未授权访问' },
         { status: 401 }
-      )
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: '用户不存在' },
-        { status: 404 }
       )
     }
 
@@ -77,12 +55,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 检查当前用户的模型名称是否已存在
+    // 检查系统级别的模型名称是否已存在
     const existingModel = await prisma.modelProvider.findFirst({
-      where: { 
-        name,
-        userId: user.id
-      }
+      where: { name }
     })
 
     if (existingModel) {
@@ -98,8 +73,7 @@ export async function POST(request: NextRequest) {
         description,
         endpoint,
         apiKey,
-        isActive: true,
-        userId: user.id
+        isActive: true
       }
     })
 

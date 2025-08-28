@@ -6,7 +6,6 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 interface HeaderProps {
-  onOpenModelSettings: () => void
   onSearch?: (query: string) => void
   onClearSearch?: () => void
   searchQuery?: string
@@ -16,7 +15,6 @@ interface HeaderProps {
 }
 
 export default function Header({ 
-  onOpenModelSettings, 
   onSearch, 
   onClearSearch, 
   searchQuery = '',
@@ -201,14 +199,6 @@ export default function Header({
             <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
           </button>
 
-          {/* 设置 */}
-          <button 
-            onClick={onOpenModelSettings}
-            className="p-1.5 lg:p-2.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 group"
-            title="模型设置"
-          >
-            <Settings className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
-          </button>
 
           {/* 用户菜单 */}
           <div className="relative" ref={userMenuRef}>
@@ -311,17 +301,6 @@ export default function Header({
 
         {/* 菜单项 */}
         <div className="py-1">
-          <button
-            onClick={() => {
-              setShowUserMenu(false)
-              onOpenModelSettings()
-            }}
-            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Settings className="h-4 w-4 mr-3 text-gray-400" />
-            模型设置
-          </button>
-          
           <button
             onClick={handleSignOut}
             className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"

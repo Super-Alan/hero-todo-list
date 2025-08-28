@@ -16,7 +16,7 @@ function inferProviderFromEndpoint(endpoint: string | null): 'OpenAI' | 'Anthrop
   return 'Generic'
 }
 
-// 获取当前用户的可用模型（仅返回活跃状态的模型）
+// 获取系统级别的可用模型（仅返回活跃状态的模型）
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -24,18 +24,9 @@ export async function GET() {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
-    }
-
-    // 从数据库获取当前用户已配置且激活的模型列表
+    // 从数据库获取系统级别已配置且激活的模型列表
     const models = await prisma.modelProvider.findMany({
       where: {
-        userId: user.id,
         isActive: true
       },
       select: {
