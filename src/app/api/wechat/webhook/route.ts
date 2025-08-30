@@ -234,7 +234,7 @@ ${process.env.NEXTAUTH_URL}/wechat/bind?token=${bindToken}
     // 处理标签
     let finalTagIds: string[] = []
     if (taskData.tagIds && taskData.tagIds.length > 0) {
-      finalTagIds = await tagService.getOrCreateTagIds(taskData.tagIds, wechatUser.userId)
+      finalTagIds = await tagService.getOrCreateTagIds(taskData.tagIds)
     }
 
     // 创建任务
