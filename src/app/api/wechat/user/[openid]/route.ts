@@ -5,7 +5,7 @@ import { wechatBinding } from '@/lib/wechat/binding'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { openid: string } }
+  { params }: { params: Promise<{ openid: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: '权限不足' }, { status: 403 })
     }
 
-    const { openid } = params
+    const { openid } = await params
     
     if (!openid) {
       return NextResponse.json({ error: 'OpenID不能为空' }, { status: 400 })
