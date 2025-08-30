@@ -7,6 +7,7 @@ import {
   HomeIcon, 
   UsersIcon, 
   CpuChipIcon, 
+  ChatBubbleLeftRightIcon,
   ArrowLeftOnRectangleIcon,
   ArrowLeftIcon 
 } from '@heroicons/react/24/outline'
@@ -15,6 +16,7 @@ const navigation = [
   { name: '仪表板', href: '/admin', icon: HomeIcon },
   { name: '用户管理', href: '/admin/users', icon: UsersIcon },
   { name: '模型管理', href: '/admin/model-providers', icon: CpuChipIcon },
+  { name: '微信用户', href: '/admin/wechat-users', icon: ChatBubbleLeftRightIcon },
 ]
 
 export default function AdminNavbar() {

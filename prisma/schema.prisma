@@ -59,6 +59,10 @@ model User {
   tags     Tag[]
   comments Comment[]
 
+  // 微信用户绑定
+  wechatUsers WechatUser[]
+  wechatTaskLogs WechatTaskLog[]
+
   // 用户设置
   timezone         String   @default("UTC")
   dateFormat       String   @default("yyyy-MM-dd")
@@ -79,6 +83,86 @@ model VerificationToken {
 
 
 
+
+// 微信公众号用户绑定
+model WechatUser {
+  id        String   @id @default(cuid())
+  openid    String   @unique // 微信用户唯一标识
+  unionid   String?  // 微信开放平台统一标识
+  nickname  String?  // 微信昵称
+  avatar    String?  // 微信头像URL
+  
+  // 用户绑定状态
+  isBindUser Boolean @default(false) // 是否已绑定系统用户
+  bindToken  String? // 绑定验证令牌
+  bindExpires DateTime? // 绑定令牌过期时间
+  
+  // 关联系统用户
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // 使用统计
+  taskCount    Int @default(0) // 创建的任务数量
+  lastActiveAt DateTime @default(now()) // 最后活跃时间
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 消息记录
+  messages WechatMessage[]
+  taskLogs WechatTaskLog[]
+
+  @@map("wechat_users")
+}
+
+// 微信消息记录
+model WechatMessage {
+  id        String   @id @default(cuid())
+  msgId     String?  // 微信消息ID
+  msgType   String   // 消息类型: text, image, voice, etc.
+  content   String   // 消息内容
+  
+  // 处理状态
+  status    WechatMessageStatus @default(PENDING) // 处理状态
+  response  String? // 回复内容
+  errorMsg  String? // 错误信息
+  
+  // 任务创建结果
+  taskId    String? // 创建的任务ID
+  task      Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  
+  // 关联微信用户
+  wechatUserId String
+  wechatUser   WechatUser @relation(fields: [wechatUserId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("wechat_messages")
+}
+
+// 微信任务创建记录
+model WechatTaskLog {
+  id         String   @id @default(cuid())
+  originalMsg String  // 原始消息内容
+  parsedData String  // 解析后的任务数据（JSON格式）
+  
+  // 创建结果
+  success    Boolean @default(false)
+  taskId     String? // 创建的任务ID
+  task       Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  errorMsg   String? // 错误信息
+  
+  // 关联用户
+  userId       String
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wechatUserId String
+  wechatUser   WechatUser @relation(fields: [wechatUserId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+
+  @@map("wechat_task_logs")
+}
 
 // 任务模型
 model Task {
@@ -111,6 +195,10 @@ model Task {
   // 标签关联
   taskTags TaskTag[]
   comments Comment[]
+
+  // 微信关联
+  wechatMessages WechatMessage[]
+  wechatTaskLogs WechatTaskLog[]
 
   // 周期性任务
   isRecurring    Boolean @default(false)
@@ -203,4 +291,11 @@ enum TaskStatus {
 enum Role {
   USER
   ADMIN
+}
+
+enum WechatMessageStatus {
+  PENDING    // 待处理
+  PROCESSING // 处理中
+  SUCCESS    // 处理成功
+  FAILED     // 处理失败
 }
