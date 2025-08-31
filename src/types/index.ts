@@ -19,6 +19,7 @@ export interface CreateTaskInput {
   description?: string
   dueDate?: Date
   dueTime?: Date
+  timeDescription?: string // 时间描述，如"明天下午3点"
   priority?: Priority
   parentTaskId?: string
   tagIds?: string[]
@@ -62,6 +63,7 @@ export interface ParsedTaskInput {
   title: string
   dueDate?: Date
   dueTime?: Date
+  timeDescription?: string // 时间描述，如"明天下午3点"
   priority?: Priority
   tagNames?: string[]
   description?: string

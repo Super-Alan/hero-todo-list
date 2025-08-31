@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { parseTaskFromInput } from '@/lib/taskParser';
+import { parseTaskWithAI, debouncedParseTask, cancelDebouncedParse, AIParseResult } from '@/lib/aiTaskParser';
 import { CreateTaskInput } from '@/types';
 import { Priority } from '@/types';
 import { CreateTaskInputWithRecurring } from '@/types/recurring';
@@ -37,7 +37,9 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
   const [isActive, setIsActive] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [parsedTask, setParsedTask] = useState<CreateTaskInput | null>(null);
+  const [parseResult, setParseResult] = useState<AIParseResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const [qualityScore, setQualityScore] = useState<number | null>(null);
   const [qualityDetails, setQualityDetails] = useState<any>(null);
   const [showQualityHint, setShowQualityHint] = useState(false);
@@ -85,50 +87,99 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
     }
   }, [isActive]);
 
+  // Basic input validation - no AI parsing during typing
   useEffect(() => {
-    if (inputValue.trim()) {
-      const parsed = parseTaskFromInput(inputValue);
-      setParsedTask(parsed);
-    } else {
+    if (!inputValue.trim()) {
       setParsedTask(null);
+      setParseResult(null);
+      setIsParsing(false);
+    } else {
+      // Only set basic task structure for validation, no AI parsing
+      setParsedTask({
+        title: inputValue.trim(),
+        tagIds: []
+      });
+      setParseResult(null);
     }
   }, [inputValue]);
 
   const handleSubmit = async () => {
-    if (!parsedTask || !parsedTask.title || isProcessing) {
-      return;
-    }
-
-    // 如果质量分数低于30分，弹出AI助手
-    if (qualityScore !== null && qualityScore < 30 && onOpenAIChat) {
-      onOpenAIChat(inputValue);
-      setInputValue('');
-      setParsedTask(null);
-      setIsActive(false);
+    if (!inputValue.trim() || isProcessing || isParsing) {
       return;
     }
 
     setIsProcessing(true);
+    setIsParsing(true);
     
     try {
+      // Perform AI parsing only when submitting
+      const parseResult = await parseTaskWithAI(inputValue, {
+        modelId: selectedModel?.id,
+        timeout: 8000, // Longer timeout for submit action
+        enableFallback: true
+      });
+
+      setParseResult(parseResult);
+      let finalTask = parseResult.task;
+
+      // 检查AI解析的置信度，如果太低则提示用户确认
+      if (parseResult.confidence < 0.5) {
+        const shouldContinue = window.confirm(
+          `AI解析置信度较低 (${Math.round(parseResult.confidence * 100)}%)。\n` +
+          `解析结果：\n` +
+          `- 标题：${finalTask.title}\n` +
+          `- 时间：${finalTask.timeDescription || '无'}\n` +
+          `- 优先级：${finalTask.priority || '普通'}\n` +
+          `- 标签：${finalTask.tagIds?.join(', ') || '无'}\n\n` +
+          `是否继续创建任务？`
+        );
+        
+        if (!shouldContinue) {
+          setIsProcessing(false);
+          setIsParsing(false);
+          return;
+        }
+      }
+
       // 转换标签名为标签ID
-      let finalTask = { ...parsedTask };
-      
-      if (parsedTask.tagIds && parsedTask.tagIds.length > 0) {
+      if (finalTask.tagIds && finalTask.tagIds.length > 0) {
         // 将标签名转换为标签ID（如果标签不存在会自动创建）
-        const tagIds = await tagService.getOrCreateTagIds(parsedTask.tagIds);
+        const tagIds = await tagService.getOrCreateTagIds(finalTask.tagIds);
         finalTask.tagIds = tagIds;
       }
 
       await onTaskSubmit(finalTask);
       setInputValue('');
       setParsedTask(null);
+      setParseResult(null);
       setIsActive(false);
     } catch (error) {
       console.error('Failed to process task:', error);
-      // 这里可以添加用户提示，比如使用 toast 通知
+      
+      // 如果AI解析完全失败，提供fallback选项
+      const shouldUseFallback = window.confirm(
+        `AI解析失败，是否使用基础解析创建任务？\n` +
+        `任务标题：${inputValue.trim()}`
+      );
+      
+      if (shouldUseFallback) {
+        try {
+          await onTaskSubmit({
+            title: inputValue.trim(),
+            tagIds: []
+          });
+          setInputValue('');
+          setParsedTask(null);
+          setParseResult(null);
+          setIsActive(false);
+        } catch (submitError) {
+          console.error('Fallback task creation failed:', submitError);
+          alert('任务创建失败，请稍后重试。');
+        }
+      }
     } finally {
       setIsProcessing(false);
+      setIsParsing(false);
     }
   };
 
@@ -357,10 +408,55 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={templateSelected ? "继续编辑任务..." : (isMobile ? "输入任务..." : "输入任务后按 Enter 保存，Tab 键选择模板")}
-        className={`w-full focus:outline-none text-sm lg:text-base bg-transparent text-gray-800 placeholder:text-gray-400 ${templateSelected ? 'border-l-4 border-l-green-500 pl-2' : ''}`}
+        placeholder={templateSelected ? "继续编辑任务..." : (isMobile ? "输入任务..." : "输入任务内容，按 Enter 或点击保存进行 AI 智能解析")}
+        className={`w-full focus:outline-none text-sm lg:text-base bg-transparent text-gray-800 placeholder:text-gray-400 ${templateSelected ? 'border-l-4 border-l-green-500 pl-2' : ''} ${isParsing ? 'opacity-70' : ''}`}
         disabled={isProcessing}
       />
+      
+      {/* AI解析状态指示器 */}
+      {isParsing && (
+        <div className="mt-2 flex items-center text-xs text-blue-600">
+          <svg className="animate-spin -ml-1 mr-2 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 7 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          🤖 AI正在智能解析任务信息...
+        </div>
+      )}
+      
+      {/* 输入提示 - 只在有内容但未解析时显示 */}
+      {inputValue.trim() && !isParsing && !parseResult && (
+        <div className="mt-1 text-xs text-gray-500 flex items-center">
+          <span className="mr-1">💡</span>
+          按回车键或点击保存进行AI智能解析
+        </div>
+      )}
+      
+      {/* AI解析结果置信度指示器 */}
+      {parseResult && !isParsing && (
+        <div className="mt-1 flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            <span className={`flex items-center ${
+              parseResult.source === 'ai' ? 'text-green-600' : 'text-orange-600'
+            }`}>
+              {parseResult.source === 'ai' ? '🤖' : '⚠️'}
+              {parseResult.source === 'ai' ? 'AI解析完成' : '基础解析'}
+            </span>
+            {parseResult.source === 'ai' && (
+              <div className="flex items-center">
+                <div className={`w-2 h-2 rounded-full mr-1 ${
+                  parseResult.confidence >= 0.8 ? 'bg-green-500' :
+                  parseResult.confidence >= 0.5 ? 'bg-yellow-500' : 'bg-red-500'
+                }`}></div>
+                <span className="text-gray-500">
+                  置信度: {Math.round(parseResult.confidence * 100)}%
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 增强的质量评分提示 */}
       {showQualityHint && qualityScore !== null && guidanceResult && (
         <div className="mt-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
@@ -399,26 +495,47 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
           )}
         </div>
       )}
-      {parsedTask && (
-        <div className="flex items-center flex-wrap gap-1 lg:gap-2 mt-2 lg:mt-3 text-xs">
-          {parsedTask.dueDate && (
-            <span className="flex items-center bg-primary-50 text-primary-700 px-2 lg:px-3 py-1 rounded-full border border-primary-200">
-              <CalendarIcon className="w-3 h-3 mr-1" />
-              {new Date(parsedTask.dueDate).toLocaleDateString()}
-            </span>
-          )}
-          {parsedTask.priority && (
-            <span className="flex items-center bg-red-50 text-red-600 px-2 lg:px-3 py-1 rounded-full border border-red-200">
-              <FlagIcon className="w-3 h-3 mr-1" />
-              {parsedTask.priority}
-            </span>
-          )}
-          {parsedTask.tagIds?.map(tag => (
-            <span key={tag} className="flex items-center bg-gray-50 text-gray-700 px-2 lg:px-3 py-1 rounded-full border border-gray-200">
-              <TagIcon className="w-3 h-3 mr-1" />
-              {tag}
-            </span>
-          ))}
+      {/* 显示AI解析后的任务详细信息 */}
+      {parseResult && parseResult.task && !isParsing && (
+        <div className="mt-2 lg:mt-3">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-gray-800 mb-2">🧠 AI解析结果:</h4>
+            <div className="flex items-center flex-wrap gap-1 lg:gap-2 text-xs">
+              {parseResult.task.title && (
+                <span className="flex items-center bg-blue-50 text-blue-700 px-2 lg:px-3 py-1 rounded-full border border-blue-200">
+                  <span className="mr-1">📝</span>
+                  {parseResult.task.title}
+                </span>
+              )}
+              {parseResult.task.dueDate && (
+                <span className="flex items-center bg-primary-50 text-primary-700 px-2 lg:px-3 py-1 rounded-full border border-primary-200">
+                  <CalendarIcon className="w-3 h-3 mr-1" />
+                  {parseResult.task.timeDescription || new Date(parseResult.task.dueDate).toLocaleDateString()}
+                  {parseResult.task.dueTime && (
+                    <span className="ml-1 text-primary-600">
+                      {new Date(parseResult.task.dueTime).toLocaleTimeString('zh-CN', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: false 
+                      })}
+                    </span>
+                  )}
+                </span>
+              )}
+              {parseResult.task.priority && (
+                <span className="flex items-center bg-red-50 text-red-600 px-2 lg:px-3 py-1 rounded-full border border-red-200">
+                  <FlagIcon className="w-3 h-3 mr-1" />
+                  {parseResult.task.priority}
+                </span>
+              )}
+              {parseResult.task.tagIds?.map(tag => (
+                <span key={tag} className="flex items-center bg-gray-50 text-gray-700 px-2 lg:px-3 py-1 rounded-full border border-gray-200">
+                  <TagIcon className="w-3 h-3 mr-1" />
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       )}
       <div className="flex justify-between items-center mt-2 lg:mt-3 pt-2 lg:pt-3 border-t border-gray-100">
@@ -458,19 +575,35 @@ const TaskAddBar: React.FC<TaskAddBarProps> = ({
         </div>
         <button
           onClick={handleSubmit}
-          disabled={!parsedTask || !parsedTask.title || isProcessing}
+          disabled={!inputValue.trim() || isProcessing}
           className="btn-modern px-4 lg:px-6 py-2 text-sm font-medium flex items-center"
         >
-          {isProcessing ? (
+          {isParsing ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 7 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {isMobile ? '解析中' : 'AI解析中...'}
+            </>
+          ) : isProcessing ? (
             <>
               <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {isMobile ? '处理中' : '处理中...'}
+              {isMobile ? '保存中' : '保存中...'}
+            </>
+          ) : parseResult ? (
+            <>
+              <span className="mr-1">✅</span>
+              {isMobile ? '确认保存' : '确认保存任务'}
             </>
           ) : (
-            '保存'
+            <>
+              <span className="mr-1">🤖</span>
+              {isMobile ? 'AI解析' : 'AI解析并保存'}
+            </>
           )}
         </button>
       </div>

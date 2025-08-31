@@ -1,5 +1,5 @@
 import { WechatMessage, WechatCommand, WechatTaskRequest } from '@/types/wechat'
-import { parseTaskFromInput } from '@/lib/taskParser'
+import { parseTaskWithAI } from '@/lib/aiTaskParser'
 import { CreateTaskInput } from '@/types'
 
 /**
@@ -100,15 +100,30 @@ export class WechatMessageProcessor {
    * 处理任务创建
    */
   async createTaskFromMessage(content: string): Promise<CreateTaskInput> {
-    // 使用现有的任务解析器
-    const parsedTask = parseTaskFromInput(content)
-    
-    // 如果没有解析出标题，使用原始内容作为标题
-    if (!parsedTask.title || parsedTask.title.trim().length === 0) {
-      parsedTask.title = content.trim()
-    }
+    try {
+      // 使用AI任务解析器
+      const parseResult = await parseTaskWithAI(content, {
+        timeout: 8000, // WeChat可以等待更长时间
+        enableFallback: true
+      })
+      
+      let parsedTask = parseResult.task
+      
+      // 如果没有解析出标题，使用原始内容作为标题
+      if (!parsedTask.title || parsedTask.title.trim().length === 0) {
+        parsedTask.title = content.trim()
+      }
 
-    return parsedTask
+      return parsedTask
+    } catch (error) {
+      console.error('WeChat task parsing failed:', error)
+      
+      // 提供基础的fallback解析
+      return {
+        title: content.trim(),
+        tagIds: []
+      }
+    }
   }
 
   /**

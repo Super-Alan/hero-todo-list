@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect, useCallback, useState } from 'react'
 import { CreateTaskInput, Priority } from '@/types';
-import { parseTaskFromInput } from '@/lib/taskParser';
+import { parseTaskWithAI, AIParseResult } from '@/lib/aiTaskParser';
 
 interface FastModeInputProps {
   input: string;
@@ -51,15 +51,49 @@ export default function FastModeInput({
   onConfirm,
   onAIBreakdown
 }: FastModeInputProps) {
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseResult, setParseResult] = useState<AIParseResult | null>(null);
 
   useEffect(() => {
-    if (input.trim()) {
-      const parsed = parseTaskFromInput(input);
-      onTaskParsed(parsed);
-    } else {
+    // Only basic validation, no AI parsing during typing
+    if (!input.trim()) {
       onTaskParsed({ title: '' }); // Clear parsed task if input is empty
+      setParseResult(null);
+      setIsParsing(false);
+    } else {
+      // Set basic task structure for preview
+      onTaskParsed({ title: input.trim(), tagIds: [] });
     }
   }, [input, onTaskParsed]);
+
+  // AI parsing function for manual trigger
+  const handleAIParse = async () => {
+    if (!input.trim() || isParsing) return;
+    
+    setIsParsing(true);
+    
+    try {
+      const result = await parseTaskWithAI(input, {
+        timeout: 6000,
+        enableFallback: true
+      });
+      
+      setParseResult(result);
+      onTaskParsed(result.task);
+      setIsParsing(false);
+    } catch (error) {
+      console.error('FastMode AI parsing failed:', error);
+      // Fallback to basic task
+      const fallbackTask = { title: input.trim(), tagIds: [] };
+      onTaskParsed(fallbackTask);
+      setParseResult({
+        task: fallbackTask,
+        confidence: 0.1,
+        source: 'fallback'
+      });
+      setIsParsing(false);
+    }
+  };
 
   const handleCustomTaskChange = useCallback((field: keyof CreateTaskInput, value: any) => {
     if (!parsedTask) return;
@@ -89,19 +123,54 @@ export default function FastModeInput({
 
   return (
     <div className="p-4 space-y-4">
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => onInputChange(e.target.value)}
-        placeholder="例如：明天完成报告 #工作 !重要"
-        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-      />
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => onInputChange(e.target.value)}
+          placeholder="例如：明天完成报告 #工作 !重要"
+          className="flex-1 p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+        />
+        <button
+          onClick={handleAIParse}
+          disabled={!input.trim() || isParsing}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors flex items-center"
+        >
+          {isParsing ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              解析中
+            </>
+          ) : (
+            <>
+              🤖 AI解析
+            </>
+          )}
+        </button>
+      </div>
 
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="flex justify-between items-start">
-          <h3 className="text-sm font-semibold text-gray-800 mb-2">
-            🧠 智能解析结果
-          </h3>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-sm font-semibold text-gray-800 mb-2">
+              {isParsing ? '🤖 AI解析中...' : parseResult ? '🧠 AI解析结果' : '📋 基础预览'}
+            </h3>
+            {parseResult && !isParsing && (
+              <span className={`text-xs px-2 py-1 rounded ${
+                parseResult.source === 'ai' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+              }`}>
+                {parseResult.source === 'ai' ? `AI解析 ${Math.round(parseResult.confidence * 100)}%` : '基础解析'}
+              </span>
+            )}
+            {!parseResult && !isParsing && input.trim() && (
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                点击"AI解析"获得智能分析
+              </span>
+            )}
+          </div>
           <button
             onClick={onCustomizeToggle}
             className="text-xs text-blue-600 hover:text-blue-800"

@@ -55,6 +55,7 @@ interface SortableTaskProps {
   getPriorityLabel: (priority: string) => string
   getPriorityBadgeStyle: (priority: string) => string
   formatDate: (dateString: string | Date | null) => string
+  getDateStatus: (dateString: string | Date | null) => { status: string; className: string }
   isDragOverlay?: boolean
   isSelected?: boolean
   bulkEditMode?: boolean
@@ -72,7 +73,8 @@ const SortableTask = ({
   getPriorityColor,
   getPriorityLabel,
   getPriorityBadgeStyle,
-  formatDate, 
+  formatDate,
+  getDateStatus,
   isDragOverlay = false,
   isSelected = false,
   bulkEditMode = false,
@@ -352,11 +354,23 @@ const SortableTask = ({
               </div>
             )}
 
-            {/* 截止日期 */}
+            {/* 截止日期和时间 */}
             {task.dueDate && (
-              <div className="flex items-center space-x-1">
+              <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${
+                getDateStatus(task.dueDate).className
+              }`}>
                 <Calendar className="h-3 w-3" />
                 <span>{formatDate(task.dueDate)}</span>
+                {(() => {
+                  const status = getDateStatus(task.dueDate).status;
+                  if (status === 'overdue') {
+                    return <span className="text-xs">已逾期</span>;
+                  }
+                  if (status === 'urgent') {
+                    return <span className="text-xs">⚠️</span>;
+                  }
+                  return null;
+                })()}
               </div>
             )}
 
@@ -857,13 +871,63 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
     }
   }
 
+  // 增强的日期时间格式化函数
   const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return ''
     const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', {
-      month: 'short',
-      day: 'numeric'
-    })
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+    
+    // 计算日期差异
+    const diffInDays = Math.floor((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    
+    // 检查是否有具体时间
+    const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0
+    const timeStr = hasTime ? ` ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}` : ''
+    
+    if (taskDate.getTime() === today.getTime()) {
+      return `今天${timeStr}`
+    } else if (taskDate.getTime() === tomorrow.getTime()) {
+      return `明天${timeStr}`
+    } else if (taskDate.getTime() === yesterday.getTime()) {
+      return `昨天${timeStr}`
+    } else if (diffInDays > 0 && diffInDays <= 7) {
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      return `${weekdays[date.getDay()]}${timeStr}`
+    } else {
+      // 对于更远的日期，显示具体日期
+      const monthDay = date.toLocaleDateString('zh-CN', {
+        month: 'short',
+        day: 'numeric'
+      })
+      return `${monthDay}${timeStr}`
+    }
+  }
+  
+  // 获取截止时间的状态和样式
+  const getDateStatus = (dateString: string | Date | null) => {
+    if (!dateString) return { status: 'none', className: '' }
+    
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = (date.getTime() - now.getTime()) / (1000 * 60 * 60)
+    
+    if (diffInHours < 0) {
+      return { status: 'overdue', className: 'text-red-600 bg-red-50 border-red-200' }
+    } else if (diffInHours < 2) {
+      return { status: 'urgent', className: 'text-red-600 bg-red-50 border-red-200 animate-pulse' }
+    } else if (diffInHours < 24) {
+      return { status: 'today', className: 'text-orange-600 bg-orange-50 border-orange-200' }
+    } else if (diffInHours < 48) {
+      return { status: 'tomorrow', className: 'text-blue-600 bg-blue-50 border-blue-200' }
+    } else {
+      return { status: 'future', className: 'text-gray-600 bg-gray-50 border-gray-200' }
+    }
   }
 
   if (loading || searchLoading) {
@@ -1019,6 +1083,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
                 getPriorityLabel={getPriorityLabel}
                 getPriorityBadgeStyle={getPriorityBadgeStyle}
                 formatDate={formatDate}
+                getDateStatus={getDateStatus}
               />
             ))}
           </div>
@@ -1039,6 +1104,7 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
               getPriorityLabel={getPriorityLabel}
               getPriorityBadgeStyle={getPriorityBadgeStyle}
               formatDate={formatDate}
+              getDateStatus={getDateStatus}
               isDragOverlay={true}
             />
           )}
