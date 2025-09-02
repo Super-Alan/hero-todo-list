@@ -13,6 +13,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
+    // 检查管理员权限
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
+    }
+
     const { daysAhead = 30 } = await request.json()
 
     // 验证参数

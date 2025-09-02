@@ -228,13 +228,32 @@ ${process.env.NEXTAUTH_URL}/wechat/bind?token=${bindToken}
   }
 
   try {
-    // 解析任务内容
-    const taskData = await messageProcessor.createTaskFromMessage(content)
+    // 解析任务内容，传入userId以获取用户的AI模型设置
+    console.log('🤖 WeChat AI Parsing Start:', {
+      content,
+      userId: wechatUser.userId,
+      openid,
+      timestamp: new Date().toISOString()
+    })
+    
+    const taskData = await messageProcessor.createTaskFromMessage(content, wechatUser.userId)
+    
+    console.log('✅ WeChat AI Parsing Result:', {
+      input: content,
+      parsed: {
+        title: taskData.title,
+        isRecurring: taskData.isRecurring,
+        recurringRule: taskData.recurringRule,
+        dueDate: taskData.dueDate,
+        priority: taskData.priority,
+        tags: taskData.tagIds
+      }
+    })
     
     // 处理标签
     let finalTagIds: string[] = []
     if (taskData.tagIds && taskData.tagIds.length > 0) {
-      finalTagIds = await tagService.getOrCreateTagIds(taskData.tagIds)
+      finalTagIds = await tagService.getOrCreateTagIds(taskData.tagIds, wechatUser.userId)
     }
 
     // 创建任务
@@ -261,11 +280,15 @@ ${process.env.NEXTAUTH_URL}/wechat/bind?token=${bindToken}
       }
     })
 
-    // 记录任务创建日志
+    // 记录任务创建日志（包含更详细的解析信息）
     await prisma.wechatTaskLog.create({
       data: {
         originalMsg: content,
-        parsedData: JSON.stringify(taskData),
+        parsedData: JSON.stringify({
+          ...taskData,
+          parseSource: taskData.isRecurring ? 'AI-recurring' : 'AI',
+          parseTime: new Date().toISOString()
+        }),
         success: true,
         taskId: task.id,
         userId: wechatUser.userId,

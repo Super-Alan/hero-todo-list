@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ArrowPathIcon, ClockIcon, UserIcon, PauseIcon, PlayIcon, SparklesIcon, CalendarIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import AdminGuard from '@/components/AdminGuard'
 
 interface SchedulingStatus {
   currentStrategy: { name: string; description: string }
@@ -16,27 +17,21 @@ interface SchedulingStatus {
 }
 
 export default function SchedulingAdminPage() {
-  const { data: session, status } = useSession()
+  return (
+    <AdminGuard>
+      <SchedulingAdminContent />
+    </AdminGuard>
+  )
+}
+
+function SchedulingAdminContent() {
+  const { data: session } = useSession()
   const router = useRouter()
   const [schedulingStatus, setSchedulingStatus] = useState<SchedulingStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-
-  // 检查管理员权限
-  useEffect(() => {
-    if (status === 'loading') return
-    if (!session) {
-      router.push('/auth/signin')
-      return
-    }
-    // 这里可以添加管理员权限检查
-    // if (!session.user.isAdmin) {
-    //   router.push('/')
-    //   return
-    // }
-  }, [session, status, router])
 
   // 获取当前状态
   const fetchStatus = async () => {

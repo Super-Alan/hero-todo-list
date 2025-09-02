@@ -13,11 +13,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    // 可以添加管理员权限检查
-    // const user = await prisma.user.findUnique({ where: { id: session.user.id } })
-    // if (user?.role !== 'ADMIN') {
-    //   return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
-    // }
+    // 检查管理员权限
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
+    }
 
     // 获取当前策略信息
     const currentStrategy = schedulingManager.getCurrentStrategy()
@@ -86,6 +85,11 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
+    }
+
+    // 检查管理员权限
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 
     const { strategy } = await request.json()

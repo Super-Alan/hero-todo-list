@@ -99,11 +99,80 @@ export class WechatMessageProcessor {
   /**
    * 处理任务创建
    */
-  async createTaskFromMessage(content: string): Promise<CreateTaskInput> {
+  async createTaskFromMessage(content: string, userId?: string): Promise<CreateTaskInput> {
     try {
-      // 使用AI任务解析器
+      // 先尝试获取用户的默认AI模型
+      let modelId: string | undefined
+      
+      if (userId) {
+        try {
+          // 动态导入prisma避免循环依赖
+          const { prisma } = await import('@/lib/prisma')
+          
+          // 获取第一个可用的活跃模型
+          const defaultModel = await prisma.modelProvider.findFirst({
+            where: {
+              isActive: true
+            },
+            orderBy: {
+              name: 'asc'
+            }
+          })
+          
+          if (defaultModel) {
+            modelId = defaultModel.id
+            console.log('🤖 Using AI model for WeChat task parsing:', {
+              modelId: defaultModel.id,
+              modelName: defaultModel.name,
+              endpoint: defaultModel.endpoint
+            })
+          }
+        } catch (error) {
+          console.warn('Failed to get default model for WeChat parsing:', error)
+        }
+      }
+      
+      // 如果找到了模型ID，使用AI解析
+      if (modelId) {
+        try {
+          const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3010'}/api/ai/parse-task`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              input: content.trim(),
+              modelId
+            })
+          })
+          
+          if (response.ok) {
+            const result = await response.json()
+            if (result.success && result.data) {
+              console.log('✅ WeChat AI parsing successful:', {
+                input: content,
+                parsed: result.data
+              })
+              
+              // 确保标题不为空
+              if (!result.data.title || result.data.title.trim().length === 0) {
+                result.data.title = content.trim()
+              }
+              
+              return result.data
+            }
+          } else {
+            console.warn('AI parsing API returned error:', response.status)
+          }
+        } catch (error) {
+          console.error('AI parsing request failed:', error)
+        }
+      }
+      
+      // 如果没有模型ID或AI解析失败，使用本地解析器作为fallback
+      console.log('⚠️ Using fallback parser for WeChat message')
       const parseResult = await parseTaskWithAI(content, {
-        timeout: 8000, // WeChat可以等待更长时间
+        timeout: 8000,
         enableFallback: true
       })
       
