@@ -256,7 +256,7 @@ ${process.env.NEXTAUTH_URL}/wechat/bind?token=${bindToken}
       finalTagIds = await tagService.getOrCreateTagIds(taskData.tagIds, wechatUser.userId)
     }
 
-    // 创建任务
+    // 创建任务（包含周期性任务支持）
     const task = await prisma.task.create({
       data: {
         title: taskData.title,
@@ -265,6 +265,8 @@ ${process.env.NEXTAUTH_URL}/wechat/bind?token=${bindToken}
         dueTime: taskData.dueTime,
         priority: taskData.priority,
         userId: wechatUser.userId,
+        isRecurring: taskData.isRecurring || false,
+        recurringRule: taskData.recurringRule || null,
         taskTags: {
           create: finalTagIds.map((tagId: string) => ({
             tagId
