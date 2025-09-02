@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession, signOut } from 'next-auth/react'
-import { Bell, Search, Settings, User, Sparkles, X, Menu, LogOut, ChevronDown } from 'lucide-react'
+import { Bell, Search, Settings, User, Sparkles, X, Menu, LogOut, ChevronDown, Shield } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -301,6 +301,21 @@ export default function Header({
 
         {/* 菜单项 */}
         <div className="py-1">
+          <a
+            href="/admin/scheduling"
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <Shield className="h-4 w-4 mr-3" />
+            调度管理
+          </a>
+          <a
+            href="/admin"
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <Settings className="h-4 w-4 mr-3" />
+            管理后台
+          </a>
+          <div className="border-t border-gray-100 my-1"></div>
           <button
             onClick={handleSignOut}
             className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"

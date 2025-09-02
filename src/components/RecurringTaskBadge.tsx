@@ -30,12 +30,16 @@ const RecurringTaskBadge: React.FC<RecurringTaskBadgeProps> = ({
   
   if (recurringRule) {
     try {
-      rule = RecurringTaskUtils.ruleFromJson(recurringRule)
+      // 确保 recurringRule 是字符串
+      const ruleString = typeof recurringRule === 'string' ? recurringRule : JSON.stringify(recurringRule)
+      rule = RecurringTaskUtils.ruleFromJson(ruleString)
       if (rule) {
-        ruleDescription = RecurringTaskUtils.formatRuleDescription(rule)
+        const desc = RecurringTaskUtils.formatRuleDescription(rule)
+        // 确保返回的是字符串
+        ruleDescription = typeof desc === 'string' ? desc : JSON.stringify(desc)
       }
     } catch (error) {
-      console.warn('解析周期规则失败:', error)
+      console.warn('解析周期规则失败:', error, recurringRule)
     }
   }
 

@@ -9,7 +9,8 @@ import {
   CpuChipIcon, 
   ChatBubbleLeftRightIcon,
   ArrowLeftOnRectangleIcon,
-  ArrowLeftIcon 
+  ArrowLeftIcon,
+  ClockIcon 
 } from '@heroicons/react/24/outline'
 
 const navigation = [
@@ -17,6 +18,7 @@ const navigation = [
   { name: '用户管理', href: '/admin/users', icon: UsersIcon },
   { name: '模型管理', href: '/admin/model-providers', icon: CpuChipIcon },
   { name: '微信用户', href: '/admin/wechat-users', icon: ChatBubbleLeftRightIcon },
+  { name: '调度管理', href: '/admin/scheduling', icon: ClockIcon },
 ]
 
 export default function AdminNavbar() {
