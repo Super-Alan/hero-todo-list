@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { RecurringTaskScheduler } from '@/lib/recurringTaskScheduler'
 
 // GET /api/tasks - 获取任务列表
 export async function GET(request: NextRequest) {
@@ -18,6 +19,12 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
+
+    // 使用智能策略生成周期性任务（异步，不阻塞响应）
+    const { UserTriggeredStrategy } = await import('@/lib/schedulingStrategies')
+    UserTriggeredStrategy.checkAndGenerate(user.id).catch(error => {
+      console.warn('自动生成周期性任务失败（不影响主功能）:', error)
+    })
 
     const { searchParams } = new URL(request.url)
     const view = searchParams.get('view')

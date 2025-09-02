@@ -1,0 +1,69 @@
+# GitHub Actions 定时任务 - Vercel Cron 的替代方案
+# 每天凌晨1点(UTC)触发周期性任务生成
+
+name: Generate Recurring Tasks
+
+on:
+  schedule:
+    # 每天 UTC 01:00 (北京时间 09:00)
+    - cron: '0 1 * * *'
+  
+  # 支持手动触发，用于测试
+  workflow_dispatch:
+
+jobs:
+  generate-tasks:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Trigger Recurring Tasks Generation
+        run: |
+          echo "🔄 开始生成周期性任务..."
+          
+          # 调用应用的定时任务API
+          curl -X POST "${{ secrets.APP_URL }}/api/cron/generate-recurring-tasks" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail-with-body \
+            --max-time 300 \
+            --retry 3 \
+            --retry-delay 10 \
+            -w "HTTP Status: %{http_code}\nTotal time: %{time_total}s\n"
+          
+          echo "✅ 周期性任务生成完成"
+
+      - name: Health Check
+        if: always()
+        run: |
+          echo "🏥 执行健康检查..."
+          
+          # 检查应用状态
+          curl -X GET "${{ secrets.APP_URL }}/api/admin/scheduling" \
+            -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --fail-with-body \
+            --max-time 30 \
+            -w "Health check status: %{http_code}\n" || echo "⚠️ 健康检查失败"
+
+      - name: Notify on Failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // 可以集成通知服务，如Slack、邮件等
+            console.log('❌ 周期性任务生成失败，需要人工介入')
+            
+            // 示例：发送到Webhook（需要配置 secrets.NOTIFICATION_WEBHOOK）
+            // await fetch(process.env.NOTIFICATION_WEBHOOK, {
+            //   method: 'POST',
+            //   headers: { 'Content-Type': 'application/json' },
+            //   body: JSON.stringify({
+            //     text: `⚠️ HeroToDoList 周期性任务生成失败\n时间: ${new Date().toISOString()}\n需要检查系统状态`
+            //   })
+            // })
+
+# 所需的 GitHub Secrets:
+# APP_URL: 应用的完整URL (如: https://your-app.vercel.app)
+# CRON_SECRET: 定时任务API的授权密钥 (与环境变量 CRON_SECRET 相同)
+# API_TOKEN: 管理API的授权token (可选，用于健康检查)
+# NOTIFICATION_WEBHOOK: 通知Webhook URL (可选)

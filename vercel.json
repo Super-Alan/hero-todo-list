@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/generate-recurring-tasks",
+      "schedule": "0 1 * * *"
+    }
+  ],
+  "functions": {
+    "src/app/api/cron/generate-recurring-tasks/route.ts": {
+      "maxDuration": 300
+    }
+  },
+  "env": {
+    "SCHEDULING_STRATEGY": "auto"
+  }
+}
