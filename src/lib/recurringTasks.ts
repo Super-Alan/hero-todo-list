@@ -1,5 +1,3 @@
-'use client'
-
 import { RecurrenceRule, RecurrenceType } from '@/types/recurring'
 
 /**
