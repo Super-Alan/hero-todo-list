@@ -3,7 +3,6 @@ import { wechatAPI } from '@/lib/wechat/api'
 import { messageProcessor } from '@/lib/wechat/message'
 import { wechatBinding } from '@/lib/wechat/binding'
 import { prisma } from '@/lib/prisma'
-import { tagService } from '@/lib/tagService'
 
 // GET 请求用于微信服务器验证
 export async function GET(request: NextRequest) {
@@ -253,7 +252,24 @@ ${process.env.NEXTAUTH_URL}/wechat/bind?token=${bindToken}
     // 处理标签
     let finalTagIds: string[] = []
     if (taskData.tagIds && taskData.tagIds.length > 0) {
-      finalTagIds = await tagService.getOrCreateTagIds(taskData.tagIds, wechatUser.userId)
+      // 在服务器端直接使用 Prisma 处理标签
+      for (const tagName of taskData.tagIds) {
+        // 查找或创建标签
+        const tag = await prisma.tag.upsert({
+          where: {
+            userId_name: {
+              userId: wechatUser.userId,
+              name: tagName
+            }
+          },
+          update: {},
+          create: {
+            name: tagName,
+            userId: wechatUser.userId
+          }
+        })
+        finalTagIds.push(tag.id)
+      }
     }
 
     // 创建任务（包含周期性任务支持）
