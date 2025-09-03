@@ -208,7 +208,7 @@ export class RecurringTaskScheduler {
    * 清理过期的未完成周期性任务实例
    * 避免任务列表过于拥挤
    */
-  static async cleanupExpiredInstances(daysPastDue: number = 7): Promise<void> {
+  static async cleanupExpiredInstances(daysPastDue: number = 7): Promise<number> {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - daysPastDue)
 
@@ -222,8 +222,10 @@ export class RecurringTaskScheduler {
       })
 
       console.log(`🧹 清理了 ${deletedTasks.count} 个过期的未完成任务实例`)
+      return deletedTasks.count
     } catch (error) {
       console.error('清理过期任务实例时出错:', error)
+      return 0
     }
   }
 

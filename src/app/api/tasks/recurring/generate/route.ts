@@ -18,7 +18,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 
-    const { daysAhead = 30 } = await request.json()
+    // 尝试解析请求体，如果失败或为空则使用默认值
+    let daysAhead = 30
+    try {
+      const body = await request.text()
+      if (body) {
+        const parsed = JSON.parse(body)
+        if (parsed.daysAhead !== undefined) {
+          daysAhead = parsed.daysAhead
+        }
+      }
+    } catch (e) {
+      // 使用默认值
+      console.log('使用默认值: daysAhead = 30')
+    }
 
     // 验证参数
     if (typeof daysAhead !== 'number' || daysAhead < 1 || daysAhead > 365) {

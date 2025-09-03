@@ -84,13 +84,17 @@ function SchedulingAdminContent() {
     setMessage(null)
     try {
       const response = await fetch('/api/tasks/recurring/generate', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ daysAhead: 30 })
       })
       if (!response.ok) throw new Error('Failed to generate tasks')
       const data = await response.json()
       setMessage({ 
         type: 'success', 
-        text: `成功生成 ${data.generated || 0} 个周期性任务` 
+        text: `成功生成 ${data.generatedCount || 0} 个周期性任务` 
       })
       // 刷新状态
       await fetchStatus()
@@ -108,13 +112,17 @@ function SchedulingAdminContent() {
     setMessage(null)
     try {
       const response = await fetch('/api/tasks/recurring/cleanup', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ daysAgo: 7 })
       })
       if (!response.ok) throw new Error('Failed to cleanup tasks')
       const data = await response.json()
       setMessage({ 
         type: 'success', 
-        text: `已清理 ${data.deleted || 0} 个过期任务` 
+        text: `已清理 ${data.deletedCount || 0} 个过期任务` 
       })
     } catch (error) {
       console.error('Error cleaning up tasks:', error)
