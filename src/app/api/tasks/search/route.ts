@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
         orderBy: [
           { priority: 'desc' }, // 高优先级优先
           { dueDate: 'asc' },   // 截止日期早的优先
-          { createdAt: 'desc' } // 最新创建的优先
+          { createdAt: 'asc' }  // 改为按创建时间升序排序，保持一致性
         ],
         take: limit
       }),

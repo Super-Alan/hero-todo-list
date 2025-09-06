@@ -888,9 +888,9 @@ const TaskList = forwardRef<TaskListHandle, TaskListProps>(({ selectedView, sele
     // 计算日期差异
     const diffInDays = Math.floor((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     
-    // 检查是否有具体时间
-    const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0
-    const timeStr = hasTime ? ` ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}` : ''
+    // 检查是否有具体时间 - 使用UTC时间确保所见即所得
+    const hasTime = date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0
+    const timeStr = hasTime ? ` ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}` : ''
     
     if (taskDate.getTime() === today.getTime()) {
       return `今天${timeStr}`

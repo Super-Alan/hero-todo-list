@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [
         { sortOrder: 'asc' },
-        { createdAt: 'desc' }
+        { createdAt: 'asc' }  // 改为按创建时间升序排序
       ]
     })
 

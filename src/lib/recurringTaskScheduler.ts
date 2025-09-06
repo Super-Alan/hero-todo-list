@@ -171,12 +171,38 @@ export class RecurringTaskScheduler {
    * 创建任务实例
    */
   private static async createTaskInstance(originalTask: any, dueDate: Date): Promise<any> {
-    // 计算 dueTime（如果原始任务有时间）
+    // 检查是否已存在相同日期的任务实例，避免重复创建
+    const existingInstance = await prisma.task.findFirst({
+      where: {
+        originalTaskId: originalTask.id,
+        dueDate: {
+          gte: new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate()),
+          lt: new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate() + 1)
+        }
+      }
+    })
+
+    if (existingInstance) {
+      console.log(`⚠️ 任务实例已存在，跳过创建: ${originalTask.title} - ${dueDate.toDateString()}`)
+      return existingInstance
+    }
+
+    // 计算 dueTime（如果原始任务有时间）- 使用UTC时间确保准确性
     let dueTime: Date | null = null
     if (originalTask.dueTime && originalTask.dueDate) {
       const originalDueTime = new Date(originalTask.dueTime)
-      dueTime = new Date(dueDate)
-      dueTime.setHours(originalDueTime.getHours(), originalDueTime.getMinutes(), 0, 0)
+      // 使用UTC方法获取和设置时间，避免时区转换问题
+      const hours = originalDueTime.getUTCHours()
+      const minutes = originalDueTime.getUTCMinutes()
+      dueTime = new Date(Date.UTC(
+        dueDate.getUTCFullYear(),
+        dueDate.getUTCMonth(), 
+        dueDate.getUTCDate(),
+        hours,
+        minutes,
+        0,
+        0
+      ))
     }
 
     const taskInstance = await prisma.task.create({
@@ -201,6 +227,7 @@ export class RecurringTaskScheduler {
       }
     })
 
+    console.log(`✅ 创建任务实例: ${originalTask.title} - ${dueDate.toDateString()}`)
     return taskInstance
   }
 
