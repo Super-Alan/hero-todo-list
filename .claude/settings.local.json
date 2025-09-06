@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx cap init:*)",
+      "Bash(npx cap add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
