@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx cap init:*)",
-      "Bash(npx cap add:*)"
+      "Bash(npx cap add:*)",
+      "Bash(keytool:*)"
     ],
     "deny": [],
     "ask": []

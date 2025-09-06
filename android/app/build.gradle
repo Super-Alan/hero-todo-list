@@ -1,5 +1,12 @@
 apply plugin: 'com.android.application'
 
+// 加载签名配置
+def signingPropsFile = file('../signing.properties')
+def signingProps = new Properties()
+if (signingPropsFile.exists()) {
+    signingProps.load(new FileInputStream(signingPropsFile))
+}
+
 android {
     namespace "com.herotodo.app"
     compileSdk rootProject.ext.compileSdkVersion
@@ -8,7 +15,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +23,29 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    
+    // 签名配置
+    signingConfigs {
+        release {
+            if (signingPropsFile.exists()) {
+                storeFile file(signingProps['storeFile'])
+                storePassword signingProps['storePassword']
+                keyAlias signingProps['keyAlias']
+                keyPassword signingProps['keyPassword']
+            }
+        }
+    }
+    
     buildTypes {
         release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            debuggable true
         }
     }
 }

@@ -14,11 +14,8 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: 'DARK'
     },
-    App: {
-      launchAutoHide: true,
-      splashBackgroundColor: '#ffffff',
-      splashShowDuration: 3000
-    },
+    // 移除 App 插件的无效配置项，启动画面配置移到 Android 原生项目
+    App: {},
     Network: {
       requestTimeout: 30000
     }
