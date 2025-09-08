@@ -57,7 +57,7 @@ export default async function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased capacitor-app mobile-optimized`}
       >
         <Providers session={session}>
           {children}

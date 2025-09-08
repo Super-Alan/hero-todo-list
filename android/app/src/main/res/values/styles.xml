@@ -13,6 +13,12 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- 状态栏实体背景设置 - 修复重叠问题 -->
+        <item name="android:statusBarColor">#ffffff</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- 确保内容不被状态栏遮挡 -->
+        <item name="android:fitsSystemWindows">false</item>
     </style>
 
 

@@ -346,6 +346,47 @@ body {
   background: linear-gradient(135deg, #0ea5e9 0%, #7c3aed 100%);
 }
 
+/* Capacitor 移动端专用样式 - 修复状态栏重叠 */
+@supports (env(safe-area-inset-top)) {
+  /* 确保根元素处理安全区域 */
+  html {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* 确保 body 不会被状态栏遮挡 */
+  body {
+    /* 为了避免双重 padding，重置 body 的 padding */
+    padding: 0;
+    /* 确保背景覆盖整个区域 */
+    min-height: 100vh;
+    min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
+
+/* Capacitor 应用中的主容器样式 */
+.capacitor-app {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  min-height: 100vh;
+  min-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
+}
+
+/* 应用头部区域避免状态栏重叠 */
+.app-header {
+  padding-top: max(env(safe-area-inset-top), 20px);
+}
+
+/* 移动端顶部导航栏安全区域处理 */
+.mobile-nav-top {
+  padding-top: env(safe-area-inset-top);
+  margin-top: 0;
+}
+
 /* Custom styles for markdown in chat messages */
 .prose {
   color: inherit;
